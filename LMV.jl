@@ -114,21 +114,21 @@ addprocs(nprocsadded, exeflags="--project")
   ze = -1
 
   # mass and charge of ions
-  # D-T-α
-  # masses
+#  # D-T-α
+#  # masses
   m1 = md*mₑ
   m2 = mT*mₑ
   mmin = mα*mₑ
-  # charge numbers
+#  # charge numbers
   z1 = 1
   z2 = 1
   zmin = 2
-#  # D-He3-p
-#  # masses
+  # D-He3-p
+  # masses
 #  m1 = md*mₑ
 #  m2 = mHe3*mₑ
 #  mmin = mp*mₑ
-#  # charge numbers
+  # charge numbers
 #  z1 = 1
 #  z2 = 2
 #  zmin = 1
@@ -647,12 +647,12 @@ if true#false
   @time plasmasols = findsolutions(Smmr)#d
 #  plasmasols = selectlargeestgrowthrate(plasmasols)
   mkpath(dirpath)
-  @save "$dirpath/solutions2D_$name_extension.jld" filecontents plasmasols w0 k0
+  @save "$dirpath/solutions2D.jld" filecontents plasmasols w0 k0
   @time plotit(plasmasols)
   rmprocs(nprocsadded)
 else
   rmprocs(nprocsadded)
-  @load "$dirpath/solutions2D_$name_extension.jld" filecontents plasmasols w0 k0
+  @load "$dirpath/solutions2D.jld" filecontents plasmasols w0 k0
   @time plotit(plasmasols)
 end
 
