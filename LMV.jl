@@ -581,6 +581,17 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   Plots.plot!(legend=false)
   Plots.savefig("$dirpath/ICE2D_F_$file_extension.pdf")
 
+  ylabel = "\$\\mathrm{Growth\\ Rate} \\ [\\Omega_{i}]\$"
+  mask = shuffle(findall(@. (imag(ωs) > imaglolim) & (real(ωs) <= maxrealfreq)))
+  nharmonics = (real.(ωs) .- vαz/Va .* kzs)
+  h_gf = Plots.scatter(real.(nharmonics[mask]), imag.(ωs[mask]),
+    zcolor=real.(ωs[mask]), framestyle=:box, lims=:round,
+    markersize=msize+1, markerstrokewidth=-1, markershape=:circle,
+    c=colorgrad, xticks=Int.(round.(extrema(real.(nharmonics[mask])))),
+    xlabel=xlabel, ylabel=ylabel, legend=:topleft)
+  Plots.plot!(legend=false)
+  Plots.savefig("$dirpath/ICE2D_NG_$file_extension.pdf")
+
   colorgrad1 = Plots.cgrad([:cyan, :red, :blue, :orange, :green,
                             :black, :yellow])
   mask = shuffle(findall(@. (imag(ωs) > imaglolim) & (real(ωs) <= maxrealfreq)))
