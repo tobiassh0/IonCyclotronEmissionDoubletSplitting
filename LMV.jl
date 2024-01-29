@@ -582,6 +582,7 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   Plots.savefig("$dirpath/ICE2D_F_$file_extension.pdf")
 
   ylabel = "\$\\mathrm{Growth\\ Rate} \\ [\\Omega_{i}]\$"
+  xlabel = "\$\\mathrm{Cyclotron\\ Harmonic}\$"
   mask = shuffle(findall(@. (imag(ωs) > imaglolim) & (real(ωs) <= maxrealfreq)))
   nharmonics = (real.(ωs) .- vαz/Va .* kzs)
   h_gf = Plots.scatter(real.(nharmonics[mask]), imag.(ωs[mask]),
@@ -592,6 +593,8 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   Plots.plot!(legend=false)
   Plots.savefig("$dirpath/ICE2D_NG_$file_extension.pdf")
 
+  xlabel = "\$\\mathrm{Frequency} \\ [\\Omega_{i}]\$"
+  ylabel = "\$\\mathrm{Growth\\ Rate} \\ [\\Omega_{i}]\$"
   colorgrad1 = Plots.cgrad([:cyan, :red, :blue, :orange, :green,
                             :black, :yellow])
   mask = shuffle(findall(@. (imag(ωs) > imaglolim) & (real(ωs) <= maxrealfreq)))
