@@ -60,25 +60,43 @@ end
 const parsedargs = parse_args(ARGS, argsettings)
 @show parsedargs
 
-using Distributed, Dates
-using Plots, Random, ImageFiltering, Statistics
-using Dierckx, Contour, JLD2, DelimitedFiles
+const _B0 = parsedargs["magneticField"]
+const _n0 = parsedargs["electronDensity"]
+const ximin = parsedargs["minorityConcentration"]
+const ξ2 = parsedargs["secondfuelionconcentrationratio"]
 
-# name of file
-# loop through each simulation
-const name_extension = parsedargs["nameextension"]
-const dirpath = mapreduce(i->"_$(i[2])", *, parsedargs; init="/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run")
-@show dirpath
-const filecontents = [i for i in readlines(open(@__FILE__))]
+using Distributed, Dates
+using Random, ImageFiltering, Statistics
+using Dierckx, Contour, JLD2, DelimitedFiles
+using Plots; gr()
+# Plots.gr() # .pyplot()
+
 const nprocsadded = div(Sys.CPU_THREADS, 2)
+
+# mass ratios
+const mp = 1836.2
+const md = 3671.5
+const mT = 5497.93
+const mHe3 = 5497.885
+const mα = 7294.3
 
 @everywhere using ProgressMeter # for some reason must be up here on its own
 @everywhere using StaticArrays
 @everywhere using FastClosures
 @everywhere using NLsolve
+@everywhere using LinearMaxwellVlasov, LinearAlgebra, WindingNelderMead
 
+function getVA(m1, m2, mmin, _xi2, z1, z2, zmin)
+  ξ2 = _xi2
+  n2 = ξ2*n0
+  nmin = ξ*n0
+  n1 = (1/z1)*(n0-z2*n2-zmin*nmin) # 1 / (1.0 + 2*ξ)
+  @assert n0 ≈ z1*n1 + z2*n2 + zmin*nmin
+  density_weighted = n1*m1 + n2*m2 + nmin*mmin
+  Va = B0 / sqrt(LinearMaxwellVlasov.μ₀*density_weighted)
+  return Va
+end
 
-Plots.gr() # .pyplot()
 function make2d(rowedges, coledges, rowvals, colvals, vals)
   @assert issorted(rowedges)
   @assert issorted(coledges)
@@ -118,8 +136,8 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   _median(patch) = median(filter(x->!ismissing(x), patch))
   realωssmooth = make2d(ykzs, xk⊥s, kzs, k⊥s, real.(ωs))
   try
-#    realωssmooth = mapwindow(_median, realωssmooth, (5, 5))
-#    realωssmooth = imfilter(realωssmooth, Kernel.gaussian(3))
+  #    realωssmooth = mapwindow(_median, realωssmooth, (5, 5))
+  #    realωssmooth = imfilter(realωssmooth, Kernel.gaussian(3))
   catch
     @warn "Smoothing failed"
   end
@@ -128,8 +146,8 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   imagspline = nothing
   try
     smoothing = length(ωs) * 1e-4
-#    realspline = Dierckx.Spline2D(xk⊥s, ykzs, realωssmooth'; kx=4, ky=4, s=smoothing)
-#    imagspline = Dierckx.Spline2D(k⊥s, kzs, imag.(ωs); kx=4, ky=4, s=smoothing)
+  #    realspline = Dierckx.Spline2D(xk⊥s, ykzs, realωssmooth'; kx=4, ky=4, s=smoothing)
+  #    imagspline = Dierckx.Spline2D(k⊥s, kzs, imag.(ωs); kx=4, ky=4, s=smoothing)
   catch err
     @warn "Caught $err. Continuing."
   end
@@ -151,6 +169,7 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
       end
     end
   end
+
   function plotcontours(spline, contourlevels, skipannotation=x->false)
     isnothing(spline) && return nothing
     x, y = sort(unique(k⊥s)), sort(unique(kzs))
@@ -194,6 +213,7 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
       clims=(climmin, climmax), xticks=0:Int(round(maximum(xk⊥s))),
       xlabel=xlabel, ylabel=ylabel)
   end
+ 
   xlabel = "\$\\mathrm{Perpendicular\\ Wavenumber} \\ [\\Omega_{i} / V_A]\$"
   ylabel = "\$\\mathrm{Parallel\\ Wavenumber} \\ [\\Omega_{i} / V_A]\$"
   zs = real.(ωs)
@@ -260,7 +280,6 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   imaglolim = 1e-5
   mask = shuffle(findall(@. (imag(ωs) > imaglolim) & (real(ωs) <= maxrealfreq)))
   @warn "Scatter plots rendering with $(length(mask)) points."
-
 
   colorgrad = Plots.cgrad([:black, :darkred, :red, :orange, :yellow])
   perm = sortperm(imag.(ωs[mask]))
@@ -353,6 +372,7 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
     ylims = Plots.ylims(p)
     return xlims[1] + rx * (xlims[2]-xlims[1]), ylims[1] + ry * (ylims[2] - ylims[1])
    end
+  
   Plots.xlabel!(h_gf, "")
   Plots.xticks!(h_gf, 0:maxrealfreq)
   Plots.annotate!(h_gf, [(relative(h_gf, 0.02, 0.95)..., Plots.text("(a)", fontsize, :black))])
@@ -364,12 +384,146 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
   Plots.savefig("$dirpath/ICE2D_Combo_$file_extension.pdf")
 end
 
+function plotter2d(z, xlabel, ylabel, colorgrad, climmin=minimum(z[@. !ismissing(z)]), climmax=maximum(z[@. !ismissing(z)]))
+  zcolor = make2d(ykzs, xk⊥s, kzs, k⊥s, z)
+  dx = (xk⊥s[2] - xk⊥s[1]) / (length(xk⊥s) - 1)
+  dy = (ykzs[2] - ykzs[1]) / (length(ykzs) - 1)
 
-if true#false
-  rmprocs(nprocsadded)
-  @load "$dirpath/solutions2D_.jld" filecontents plasmasols w0 k0
-  @time plotit(plasmasols)
+  h = Plots.heatmap(xk⊥s, ykzs, zcolor, framestyle=:box, c=colorgrad,
+    xlims=(minimum(xk⊥s) - dx/2, maximum(xk⊥s) + dx/2),
+    ylims=(minimum(ykzs) - dy/2, maximum(ykzs) + dy/2),
+    clims=(climmin, climmax), xticks=0:Int(round(maximum(xk⊥s))),
+    xlabel=xlabel, ylabel=ylabel)
+  return h
 end
+
+function getWavenumbers(sols, w0, k0)
+  ωs = [sol.frequency for sol in sols]./w0
+  nunstable = sum(imag(sol.frequency) > 0 for sol in sols)
+  @info "There are $nunstable unstable solutions out of $(length(sols))"
+  kzs = [para(sol.wavenumber) for sol in sols]./k0
+  k⊥s = [perp(sol.wavenumber) for sol in sols]./k0
+  xk⊥s = sort(unique(k⊥s))
+  ykzs = sort(unique(kzs))
+
+  ks = [abs(sol.wavenumber) for sol in sols]./k0
+  kθs = atan.(k⊥s, kzs)
+  extremaangles = collect(extrema(kθs))
+  return ωs, kzs, k⊥s, xk⊥s, ykzs, ks, kθs, extremaangles
+end
+
+function relative(p, rx, ry)
+  xlims = Plots.xlims(p)
+  ylims = Plots.ylims(p)
+  return xlims[1] + rx * (xlims[2]-xlims[1]), ylims[1] + ry * (ylims[2] - ylims[1])
+end
+
+@everywhere begin
+  rmprocs(nprocsadded)
+  const dir = dirname(pwd())*"/ICE_DS/JET26148/default_params_with_Triton_concentration"
+  fontsize=9
+
+  # electron mass and charge
+  mₑ = LinearMaxwellVlasov.mₑ
+  ze = -1
+
+  const ξ = Float64(@fetchfrom 1 ximin)
+  # concentrations and densities
+  # Fig 18 Cottrell 1993
+  n0 = Float64(@fetchfrom 1 _n0) #1.5e19# 5e19 # 1.7e19 # central electron density 3.6e19
+  B0 = Float64(@fetchfrom 1 _B0) #3.7 #2.07 = 2.8T * 2.96 m / 4m
+  # 2.23 T is 17MHz for deuterium cyclotron frequency
+
+  # set secondary fuel concentration
+  # ξ2 = 0.11
+  m1 = md*mₑ
+  m2 = mT*mₑ
+  mmin = mα*mₑ
+  z1 = 1
+  z2 = 1
+  zmin = 2
+ 
+  const name_extension = parsedargs["nameextension"]
+  const filecontents = [i for i in readlines(open(@__FILE__))]
+  
+  colorgrad = :haline #Plots.cgrad([:cyan, :blue, :darkblue, :midnightblue, :black, :darkred, :red, :orange, :yellow])
+  clims = (-0.15,0.15)
+  xi2arr = [0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9] #LinRange(0.45,0.95,11)
+  harr = []
+  # loop through each concentration
+  for i = 1:length(xi2arr)
+    xi2 = xi2arr[i] # parsedargs["secondfuelionconcentrationratio"]
+    @show xi2
+    # get densities
+    n2 = xi2*n0
+    nmin = ξ*n0
+    n1 = (1/z1)*(n0-z2*n2-zmin*nmin) # 1 / (1.0 + 2*ξ)
+    @assert n0 ≈ z1*n1 + z2*n2 + zmin*nmin
+    # get Va
+    Va = getVA(m1, m2, mmin, xi2, z1, z2, zmin)  
+    # freqs
+    Ωe = cyclotronfrequency(B0, mₑ, ze)
+    Ω1 = cyclotronfrequency(B0, m1, z1)
+    Ωmin = cyclotronfrequency(B0, mmin, zmin)
+    Πe = plasmafrequency(n0, mₑ, ze)
+    Π1 = plasmafrequency(n1, m1, z1)
+    Πmin = plasmafrequency(nmin, mmin, zmin)
+    if xi2 != 0
+      Ω2 = cyclotronfrequency(B0, m2, z2)
+      Π2 = plasmafrequency(n2, m2, z2)
+    else
+      Ω2 = 0
+      Π2 = 0
+    end
+    w0 = abs(Ωmin)
+    k0 = w0 / abs(Va)
+    @show w0
+      
+    # get directory
+    #dirpath = mapreduce(i->"_$(i[2])", *, parsedargs; init="$dir/ICE_DS/JET26148/default_params_with_Triton_concentration/run")
+    dirpath = "$dir/run_2.07_$xi2"*"_0.01_-0.646_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024"
+    @show dirpath
+    
+    @load "$dirpath/solutions2D_.jld" filecontents plasmasols w0 k0
+    sols = sort(plasmasols, by=s->imag(s.frequency))
+    ωs, kzs, k⊥s, xk⊥s, ykzs, ks, kθs, extremaangles = getWavenumbers(sols, w0, k0)
+    
+    # plot
+    zs = imag.(ωs)
+    climmax = maximum(zs)
+    xlabel = "\$\\mathrm{Perpendicular\\ Wavenumber} \\ [\\Omega_{i} / V_A]\$"
+    ylabel = "\$\\mathrm{Parallel\\ Wavenumber} \\ [\\Omega_{i} / V_A]\$"
+
+    climmin=minimum(zs[@. !ismissing(zs)])
+    climmax=maximum(zs[@. !ismissing(zs)])
+    zcolor = make2d(ykzs, xk⊥s, kzs, k⊥s, zs)
+    dx = (xk⊥s[2] - xk⊥s[1]) / (length(xk⊥s) - 1)
+    dy = (ykzs[2] - ykzs[1]) / (length(ykzs) - 1)
+  
+    h = Plots.heatmap(xk⊥s, ykzs, zcolor, clims=clims, 
+        framestyle=:box, c=colorgrad, cbar=false)#,
+      # framestyle=:box, c=colorgrad,
+      # xlims=(minimum(xk⊥s) - dx/2, maximum(xk⊥s) + dx/2),
+      # ylims=(minimum(ykzs) - dy/2, maximum(ykzs) + dy/2),
+      # clims=(climmin, climmax), xticks=0:Int(round(maximum(xk⊥s))),
+      # xlabel=xlabel, ylabel=ylabel)
+    
+    Plots.annotate!(h, [(relative(h, 0.02, 0.95)..., Plots.text("$xi2", fontsize, :black))])
+    Plots.plot!(xlims=(11, 15),ylims=(-1,1),ticks=false)
+    push!(harr, h) # append handle to handle array
+    @show "here plotted"
+  end
+  h2 = scatter([0,0], [0,1], zcolor=[0,3], clims=clims, xlims=(1,1.1), 
+                label="", c=colorgrad, colorbar_title="\$\\mathrm{Growth\\ Rate} \\ [\\Omega_{i}]\$", framestyle=:none)
+  push!(harr, h2)
+  @show harr
+  @show size(harr)
+  # layout of plot
+  l = @layout [grid(2,5) a{0.035w}]
+  Plots.plot(harr..., link=:x, margin=0.01Plots.mm, layout=l)#@layout [a c e g i; b d f h j])
+  Plots.savefig("$dir/total_combined.png")#.pdf
+end
+
 
 println("Ending at ", now())
 

@@ -88,7 +88,8 @@ const _B0 = parsedargs["magneticField"]
 const _n0 = parsedargs["electronDensity"]
 # name of file
 const name_extension = parsedargs["nameextension"]
-const dirpath = mapreduce(i->"_$(i[2])", *, parsedargs; init="run")
+dir = dirname(pwd())
+const dirpath = mapreduce(i->"_$(i[2])", *, parsedargs; init="$dir/ICE_DS/JET26148/default_params_with_Triton_concentration/run")
 @show dirpath
 const filecontents = [i for i in readlines(open(@__FILE__))]
 const nprocsadded = div(Sys.CPU_THREADS, 2)
@@ -504,7 +505,7 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
 
   zs = imag.(ωs)
   climmax = maximum(zs)
-  colorgrad = Plots.cgrad([:cyan, :blue, :darkblue, :midnightblue, :black, :darkred, :red, :orange, :yellow])
+  colorgrad = :haline #Plots.cgrad([:cyan, :blue, :darkblue, :midnightblue, :black, :darkred, :red, :orange, :yellow])
   plotter2d(zs, xlabel, ylabel, colorgrad, -climmax, climmax)
   Plots.title!(" ")
   Plots.plot!(legend=false)
@@ -643,16 +644,16 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
 end
 
 
-if true#false
+if false#true
   @time plasmasols = findsolutions(Smmr)#d
 #  plasmasols = selectlargeestgrowthrate(plasmasols)
   mkpath(dirpath)
-  @save "$dirpath/solutions2D.jld" filecontents plasmasols w0 k0
+  @save "$dirpath/solutions2D_.jld" filecontents plasmasols w0 k0
   @time plotit(plasmasols)
   rmprocs(nprocsadded)
 else
   rmprocs(nprocsadded)
-  @load "$dirpath/solutions2D.jld" filecontents plasmasols w0 k0
+  @load "$dirpath/solutions2D_.jld" filecontents plasmasols w0 k0
   @time plotit(plasmasols)
 end
 
