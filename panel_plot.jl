@@ -446,7 +446,7 @@ end
   const name_extension = parsedargs["nameextension"]
   const filecontents = [i for i in readlines(open(@__FILE__))]
   
-  colorgrad = :haline #Plots.cgrad([:cyan, :blue, :darkblue, :midnightblue, :black, :darkred, :red, :orange, :yellow])
+  colorgrad = :YlGn_3 #:haline #Plots.cgrad([:cyan, :blue, :darkblue, :midnightblue, :black, :darkred, :red, :orange, :yellow])
   clims = (-0.15,0.15)
   xi2arr = [0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9] #LinRange(0.45,0.95,11)
   harr = []
@@ -500,9 +500,8 @@ end
     dx = (xk⊥s[2] - xk⊥s[1]) / (length(xk⊥s) - 1)
     dy = (ykzs[2] - ykzs[1]) / (length(ykzs) - 1)
   
-    h = Plots.heatmap(xk⊥s, ykzs, zcolor, clims=clims, 
-        framestyle=:box, c=colorgrad, cbar=false)#,
-      # framestyle=:box, c=colorgrad,
+    h = Plots.heatmap(xk⊥s, ykzs, zcolor, framestyle=:box, 
+        c=colorgrad, cbar=false,clims=clims)#,
       # xlims=(minimum(xk⊥s) - dx/2, maximum(xk⊥s) + dx/2),
       # ylims=(minimum(ykzs) - dy/2, maximum(ykzs) + dy/2),
       # clims=(climmin, climmax), xticks=0:Int(round(maximum(xk⊥s))),
@@ -511,17 +510,18 @@ end
     Plots.annotate!(h, [(relative(h, 0.02, 0.95)..., Plots.text("$xi2", fontsize, :black))])
     Plots.plot!(xlims=(11, 15),ylims=(-1,1),ticks=false)
     push!(harr, h) # append handle to handle array
-    @show "here plotted"
+    @show "plotted $xi2"
   end
-  h2 = scatter([0,0], [0,1], zcolor=[0,3], clims=clims, xlims=(1,1.1), 
-                label="", c=colorgrad, colorbar_title="\$\\mathrm{Growth\\ Rate} \\ [\\Omega_{i}]\$", framestyle=:none)
-  push!(harr, h2)
-  @show harr
+  h2 = scatter([0,0], [0,1], zcolor=[0,3], xlims=(1,1.1), 
+                label="", c=colorgrad, 
+                colorbar_title="\$\\mathrm{Growth\\ Rate} \\ [\\Omega_{i}]\$", 
+                framestyle=:none,clims=clims)
+  push!(harr, h2) # append handles array 
   @show size(harr)
   # layout of plot
-  l = @layout [grid(2,5) a{0.035w}]
+  l = @layout [grid(2,5) a{0.035w}] # (nrows, ncols) {cbar width}
   Plots.plot(harr..., link=:x, margin=0.01Plots.mm, layout=l)#@layout [a c e g i; b d f h j])
-  Plots.savefig("$dir/total_combined.png")#.pdf
+  Plots.savefig("$dir/_combined.png")#.pdf
 end
 
 
