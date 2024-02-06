@@ -6,18 +6,19 @@ tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
 
 ## Dump pkl files
 def dumpfiles(array, quant):
-	print('Pickling '+quant+'...')
-	with open(quant+'.pkl', 'wb') as f:
-		pickle.dump(array,f)
+    print('Pickling '+quant+'...')
+    with open(quant+'.pkl', 'wb') as f:
+        pickle.dump(array,f)
+    return None
 
 ## Read pkl files
 def read_pkl(quant):
-	with open(quant+'.pkl', 'rb') as f:
-		print('Loading '+quant+'...')
-		array = pickle.load(f)
-	print('Done.')
-	# automatically closed when loaded due to "with" statement
-	return array
+    with open(quant+'.pkl', 'rb') as f:
+        print('Loading '+quant+'...')
+        array = pickle.load(f)
+    print('Done.')
+    # automatically closed when loaded due to "with" statement
+    return array
 
 def paraload(i,f,sols):
     print(i)
@@ -35,30 +36,26 @@ def jld_to_pkl(loc='',frac=1):
     solshape = sols.shape[0] ; print(solshape)
     w = np.zeros(int(solshape/frac+1)) ; dw = np.zeros(int(solshape/frac+1))
     kpara = np.zeros(int(solshape/frac+1)) ; kperp = np.zeros(int(solshape/frac+1))
-
-    #######################
-    # TODO; parallelise this
-    arr = [i for i in range(len(sols))]
-    pool = mp.Pool(mp.cpu_count())
-    par = partial(paraload,f=f,sols=sols) # utilise functools partial package
-    res = np.array(pool.map_async(par,arr).get(99999))
-    pool.close()
-    w,dw,kpara,kperp=np.split(res,4,axis=1)
-    print(len(w),len(kpara))
-    sys.exit()
-
-    #######################
+    # #######################
+    # # TODO; parallelise this
+    # arr = [i for i in range(len(sols))]
+    # pool = mp.Pool(mp.cpu_count())
+    # par = partial(paraload,f=f,sols=sols) # utilise functools partial package
+    # res = np.array(pool.map_async(par,arr).get(99999))
+    # pool.close()
+    # w,dw,kpara,kperp=np.split(res,4,axis=1)
+    # print(len(w),len(kpara))
+    # sys.exit()
+    # #######################
     for i in range(len(sols[::frac])):
         item = sols[i]
-        print(item)
         w[i],dw[i] = f[item][()][0]
         kpara[i],kperp[i] = f[item][()][1]
     dumpfiles(w,'frequency')
     dumpfiles(dw,'growthrates')
     dumpfiles(kpara,'parallelwavenumber')
     dumpfiles(kperp,'perpendicularwavenumber')
-    dumpfiles([w0,k0],'w0k0')
-    
+    dumpfiles([w0,k0],'w0k0')    
     return w0,k0,w,dw,kpara,kperp
 
 def read_all_data(loc=''):
@@ -118,7 +115,7 @@ def make2D(rowval,colval,val,limits=True):
     for k in range(len(rowval)):
         i = np.where(rowval[k] >= rowarr)[0][-1] # last index corresponding to row
         j = np.where(colval[k] >= colarr)[0][-1] # last index corresponding to column
-        if Z[i,j] < val[k]: 
+        if Z[i,j] < val[k]:
             Z[i,j]=val[k] # assign highest growth rate
     if limits:
         return Z, [colmin,colmax,rowmin,rowmax]
@@ -140,9 +137,10 @@ def plot_k2d_growth(kpara,kperp,dw,norm=[None,None],cmap='summer',labels=['','']
     print('plotted k2d')
     return None
 
-def plot_frq_kpara(kpara,w,dw,norm=[None,None],cmap='summer',labels=['','']):
+def plot_frq_kpara(kpara,w,dw,maxw=None,norm=[None,None],cmap='summer',labels=['','']):
     # make 2d matrix
-    Z,extents=make2D(kpara,w,dw)
+    thresh = w/norm[0] < maxw
+    Z,extents=make2D(kpara[thresh],w[thresh],dw[thresh])
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
     wmin,wmax,kmin,kmax = np.array(extents)
@@ -156,8 +154,9 @@ def plot_frq_kpara(kpara,w,dw,norm=[None,None],cmap='summer',labels=['','']):
     print('plotted freq kpara')
     return None
 
-def plot_frq_kperp(kperp,w,dw,norm=[None,None],cmap='summer',labels=['','']):
+def plot_frq_kperp(kperp,w,dw,maxw=None,norm=[None,None],cmap='summer',labels=['','']):
     # make 2d matrix
+    thresh = w/norm[0] < maxw
     Z,extents=make2D(kperp,w,dw)
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
@@ -172,30 +171,33 @@ def plot_frq_kperp(kperp,w,dw,norm=[None,None],cmap='summer',labels=['','']):
     print('plotted freq kperp')
     return None
 
-def plot_frq_growth(w,dw,kpara,norm=[None,None],labels=['','']):
+def plot_frq_growth(w,dw,kpara,maxw=None,norm=[None,None],labels=['','']):
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
-    sc = ax.scatter(w/w0,dw/w0,c=kpara/norm[1])
+    thresh = (w/norm[0] < maxw) & (dw/norm[0] > 0)
+    sc = ax.scatter(w[thresh]/norm[0],dw[thresh]/norm[0],c=kpara[thresh]/norm[1],edgecolor='none',vmin=-1.5,vmax=1.5) # tsh : hardcoded, change as needed
     cbar = plt.colorbar(sc)
     cbar.ax.set_ylabel(r'$k_\parallel v_A/\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
     ax.set_xlabel(labels[0],**tnrfont)
     ax.set_ylabel(labels[1],**tnrfont)
+    ax.set_xlim(0,maxw)
+    ax.set_ylim(0,0.15)
     fig.savefig('freq_growth.pdf',bbox_inches='tight')
     print('plotted freq growth')
     return None
 
-def make_all_plots(alldata=None,cmap='summer'):
+def make_all_plots(alldata=None,maxnormfreq=15,cmap='summer'):
     w0,k0,w,dw,kpara,kperp = alldata
     # labels
     l1 = r'$k_\perp v_A/\Omega_i$'
     l2 = r'$k_\parallel v_A/\Omega_i$'
     l3 = r'$\omega/\Omega_i$'
     l4 = r'$\gamma/\Omega_i$'
-    plot_k2d_growth(kpara,kperp,dw,norm=[w0,k0],cmap=cmap,labels=[l1,l2])
-    plot_frq_growth(w,dw,kpara,norm=[w0,k0],labels=[l3,l4])
-    # TODO; memory intensive, utilise 2d histograms (fixed #bins)
-    # plot_frq_kpara(kpara,w,dw,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
-    # plot_frq_kperp(w,dw,kperp,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
+    # plot_k2d_growth(kpara,kperp,dw,norm=[w0,k0],cmap=cmap,labels=[l1,l2])
+    # plot_frq_growth(w,dw,kpara,maxw=maxnormfreq,norm=[w0,k0],labels=[l3,l4])
+    # # TODO; memory intensive, utilise 2d histograms (fixed #bins)
+    # plot_frq_kpara(kpara,w,dw,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
+    # plot_frq_kperp(w,dw,kperp,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
 
 #-#-#
@@ -217,7 +219,15 @@ if __name__ == '__main__':
     XI2 = np.arange(0,1,0.05)
     for xi2 in XI2:
         print(xi2)
-        solloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
+        solloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run_2.07_{}_0.01_-0.646_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(xi2)
         os.chdir(solloc)
         data=read_all_data(loc=solloc)
         make_all_plots(alldata=data)
+
+"""
+TODO
+    - parallelise loading and converting of HDF5 solutions2D_.jld to pkl
+        - issue : raise TypeError("h5py objects cannot be pickled")
+    - bin freq axis for freq vs k(para or perp) as too many unique freq values
+        - could also just shrink to anything below maxnormfreq used
+"""
