@@ -460,7 +460,7 @@ end
     n1 = (1/z1)*(n0-z2*n2-zmin*nmin) # 1 / (1.0 + 2*ξ)
     @assert n0 ≈ z1*n1 + z2*n2 + zmin*nmin
     # get Va
-    Va = getVA(m1, m2, mmin, xi2, z1, z2, zmin)  
+    Va = getVA(m1, m2, mmin, xi2, z1, z2, zmin)
     # freqs
     Ωe = cyclotronfrequency(B0, mₑ, ze)
     Ω1 = cyclotronfrequency(B0, m1, z1)

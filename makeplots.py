@@ -26,7 +26,15 @@ def paraload(i,f,sols):
     kparai,kperpi=f[sols[i]][()][1]
     return [wi,dwi,kparai,kperpi]
 
-def jld_to_pkl(loc='',frac=1):
+def paraload_int(I):
+    loc,i=I
+    f = h5py.File(loc+'solutions2D_.jld',"r")
+    sols = f["plasmasols"][()]
+    wi,dwi=f[sols[i]][()][0]
+    kparai,kperpi=f[sols[i]][()][1]
+    return [wi,dwi,kparai,kperpi]
+
+def jld_to_pkl(loc='',frac=1,parallel=False):
     f = h5py.File(loc+'solutions2D_.jld',"r")
     keys=f.keys()
     # for k in keys: print(k)
@@ -36,21 +44,21 @@ def jld_to_pkl(loc='',frac=1):
     solshape = sols.shape[0] ; print(solshape)
     w = np.zeros(int(solshape/frac+1)) ; dw = np.zeros(int(solshape/frac+1))
     kpara = np.zeros(int(solshape/frac+1)) ; kperp = np.zeros(int(solshape/frac+1))
-    # #######################
-    # # TODO; parallelise this
-    # arr = [i for i in range(len(sols))]
-    # pool = mp.Pool(mp.cpu_count())
-    # par = partial(paraload,f=f,sols=sols) # utilise functools partial package
-    # res = np.array(pool.map_async(par,arr).get(99999))
-    # pool.close()
-    # w,dw,kpara,kperp=np.split(res,4,axis=1)
-    # print(len(w),len(kpara))
-    # sys.exit()
-    # #######################
-    for i in range(len(sols[::frac])):
-        item = sols[i]
-        w[i],dw[i] = f[item][()][0]
-        kpara[i],kperp[i] = f[item][()][1]
+    # parallel loop
+    if parallel:
+        arr = [[loc, i] for i in range(len(sols))]
+        pool = mp.Pool(mp.cpu_count())
+        res = np.array(pool.map_async(paraload_int,arr).get(99999))
+        pool.close()
+        w,dw,kpara,kperp=np.split(res,4,axis=1)
+        print(len(w),len(kpara))
+    # linear loop
+    if not parallel:
+        for i in range(len(sols[::frac])):
+            item = sols[i]
+            w[i],dw[i] = f[item][()][0]
+            kpara[i],kperp[i] = f[item][()][1]
+    # dumpfiles
     dumpfiles(w,'frequency')
     dumpfiles(dw,'growthrates')
     dumpfiles(kpara,'parallelwavenumber')
@@ -202,6 +210,7 @@ def make_all_plots(alldata=None,maxnormfreq=15,cmap='summer'):
 
 #-#-#
 if __name__ == '__main__':
+    ## PACKAGES
     # standard
     import numpy as np
     import matplotlib.pyplot as plt
@@ -215,8 +224,10 @@ if __name__ == '__main__':
     from functools import partial
     # other
     import os,sys
+    ## BODY
+    # loop over concentrations
     home = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
-    XI2 = np.arange(0,1,0.05)
+    XI2 = [0.0,0.05,0.1,0.11,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
     for xi2 in XI2:
         print(xi2)
         solloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run_2.07_{}_0.01_-0.646_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(xi2)
@@ -226,8 +237,8 @@ if __name__ == '__main__':
 
 """
 TODO
-    - parallelise loading and converting of HDF5 solutions2D_.jld to pkl
+    /> parallelise loading and converting of HDF5 solutions2D_.jld to pkl
         - issue : raise TypeError("h5py objects cannot be pickled")
-    - bin freq axis for freq vs k(para or perp) as too many unique freq values
+    > bin freq axis for freq vs k(para or perp) as too many unique freq values
         - could also just shrink to anything below maxnormfreq used
 """
