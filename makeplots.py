@@ -78,44 +78,26 @@ def read_all_data(loc=''):
     data = w0,k0,w,dw,kpara,kperp
     return data
 
-# def make2D(data=None):
-#     w0,k0,w,dw,kpara,kperp = data
-#     if kpara.shape != kperp.shape and kpara.shape != dw.shape:
-#         raise SystemError
-#     # unique values
-#     ukpara,kparaind = np.unique(kpara,return_index=True)
-#     ukperp,kperpind = np.unique(kperp,return_index=True)
-#     # kind = np.sort(np.concatenate((kparaind,kperpind)))
-#     ny,nx=[len(ukpara),len(ukperp)]
-#     # min, max values
-#     kparamin, kparamax = [np.min(kpara),np.max(kpara)]
-#     kperpmin, kperpmax = [np.min(kperp),np.max(kperp)]
-#     print(kparamin/k0, kparamax/k0)
-#     print(kperpmin/k0, kperpmax/k0)
-#     # arrays between max and min values
-#     kperparr = np.linspace(kperpmin,kperpmax,nx)
-#     kparaarr = np.linspace(kparamin,kparamax,ny)
-#     Z = np.zeros((len(kperparr)+1,len(kparaarr)+1))
-#     for k in range(len(kpara)):
-#         i = np.where(kpara[k] >= kparaarr)[0][-1] # last index corresponding to row
-#         j = np.where(kperp[k] >= kperparr)[0][-1] # last index corresponding to column
-#         if Z[i,j] < dw[k]: 
-#             Z[i,j]=dw[k] # assign highest growth rate
-#     plt.imshow(Z/w0,origin='lower',aspect='auto',cmap='jet')
-#     plt.colorbar()
-#     plt.show()
-#     return None
-
-def make2D(rowval,colval,val,limits=True):
+def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,None),limits=False):
     if rowval.shape != colval.shape and rowval.shape != val.shape:
         raise SystemError
-    # unique values
-    urow,urowind = np.unique(rowval,return_index=True)
-    ucol,ucolind = np.unique(colval,return_index=True)
-    nx,ny=[len(urow),len(ucol)]
-    # min, max values
-    rowmin, rowmax = [np.min(rowval),np.max(rowval)]
-    colmin, colmax = [np.min(colval),np.max(colval)]
+    if rowlim[0] != None or collim[0] != None:
+        # thresh to limit size
+        thresh = (rowlim[0]<rowval) & (rowval<rowlim[1]) & (collim[0]<colval) & (colval<collim[1]) 
+        rowval = rowval[thresh] ; colval = colval[thresh] ; val = val[thresh]
+    if bins[0] == None: # no bins
+        # unique values
+        urow,urowind = np.unique(rowval,return_index=True)
+        ucol,ucolind = np.unique(colval,return_index=True)
+        nx,ny=[len(urow),len(ucol)]
+        # min, max values from data
+        rowmin, rowmax = [np.min(rowval),np.max(rowval)]
+        colmin, colmax = [np.min(colval),np.max(colval)]
+    else:
+        nx,ny=bins
+        # min max values from user input
+        rowmin, rowmax = rowlim
+        colmin, colmax = collim
     # arrays between max and min values
     rowarr = np.linspace(rowmin,rowmax,nx)
     colarr = np.linspace(colmin,colmax,ny)
@@ -130,12 +112,13 @@ def make2D(rowval,colval,val,limits=True):
     else:
         return Z
 
-def plot_k2d_growth(kpara,kperp,dw,norm=[None,None],cmap='summer',labels=['','']):
+def plot_k2d_growth(kpara,kperp,dw,norm=[None,None],cmap='summer',clims=(None,None),labels=['','']):
     # make 2d matrix
-    Z,extents=make2D(kpara,kperp,dw) # y, x, val
+    Z,extents=make2D(kpara,kperp,dw,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),\
+                        bins=(1000,1000),limits=True) # y, x, val
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
-    im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap)
+    im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
     cbar = plt.colorbar(im)
     cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
     ax.set_xlabel(labels[0],**tnrfont)
@@ -148,11 +131,12 @@ def plot_k2d_growth(kpara,kperp,dw,norm=[None,None],cmap='summer',labels=['','']
 def plot_frq_kpara(kpara,w,dw,maxw=None,norm=[None,None],cmap='summer',labels=['','']):
     # make 2d matrix
     thresh = w/norm[0] < maxw
-    Z,extents=make2D(kpara[thresh],w[thresh],dw[thresh])
+    Z,extents=make2D(kpara[thresh],w[thresh],dw[thresh],rowlim=(-4*norm[1],4*norm[1]),\
+                    collim=(0,15*norm[0]),bins=(1000,1000),limits=True)
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
     wmin,wmax,kmin,kmax = np.array(extents)
-    im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=[wmin/w0,wmax/w0,kmin/k0,kmax/k0],cmap=cmap)
+    im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=[wmin/norm[0],wmax/norm[0],kmin/norm[1],kmax/norm[1]],cmap=cmap)
     cbar = plt.colorbar(im)
     cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
     ax.set_xlabel(labels[0],**tnrfont)
@@ -162,28 +146,33 @@ def plot_frq_kpara(kpara,w,dw,maxw=None,norm=[None,None],cmap='summer',labels=['
     print('plotted freq kpara')
     return None
 
-def plot_frq_kperp(kperp,w,dw,maxw=None,norm=[None,None],cmap='summer',labels=['','']):
+def plot_frq_kperp(kperp,w,dw,maxk=None,maxw=None,norm=[None,None],cmap='summer',labels=['',''],clims=(None,None)):
     # make 2d matrix
     thresh = w/norm[0] < maxw
-    Z,extents=make2D(kperp,w,dw)
+    Z,extents=make2D(kperp,w,dw,rowlim=(0,maxk*norm[1]),collim=(0,maxw*norm[0]),\
+                    bins=(1000,1000),limits=True)
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
     wmin,wmax,kmin,kmax = np.array(extents)
-    im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=[wmin/w0,wmax/w0,kmin/k0,kmax/k0],cmap=cmap)
+    im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=[wmin/norm[0],wmax/norm[0],kmin/norm[1],kmax/norm[1]],\
+                    clim=clims,cmap=cmap)
     cbar = plt.colorbar(im)
     cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
     ax.set_xlabel(labels[0],**tnrfont)
     ax.set_ylabel(labels[1],**tnrfont)
-    fig.savefig('freq_kperp_growthrates.pdf',bbox_inches='tight')
+    ax.plot([0,maxw],[0,maxw],linestyle='--',color='white')
+    ax.set_ylim(0,maxk)
+    ax.set_xlim(0,maxw)
+    fig.savefig('freq_kperp_growthrates_1.pdf',bbox_inches='tight')
     del Z
     print('plotted freq kperp')
     return None
 
-def plot_frq_growth(w,dw,kpara,maxw=None,norm=[None,None],labels=['','']):
+def plot_frq_growth(w,dw,kpara,maxw=None,norm=[None,None],clims=(-1.5,1.5),labels=['','']):
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
     thresh = (w/norm[0] < maxw) & (dw/norm[0] > 0)
-    sc = ax.scatter(w[thresh]/norm[0],dw[thresh]/norm[0],c=kpara[thresh]/norm[1],edgecolor='none',vmin=-1.5,vmax=1.5) # tsh : hardcoded, change as needed
+    sc = ax.scatter(w[thresh]/norm[0],dw[thresh]/norm[0],c=kpara[thresh]/norm[1],edgecolor='none',vmin=clims[0],vmax=clims[1])
     cbar = plt.colorbar(sc)
     cbar.ax.set_ylabel(r'$k_\parallel v_A/\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
     ax.set_xlabel(labels[0],**tnrfont)
@@ -194,18 +183,17 @@ def plot_frq_growth(w,dw,kpara,maxw=None,norm=[None,None],labels=['','']):
     print('plotted freq growth')
     return None
 
-def make_all_plots(alldata=None,maxnormfreq=15,cmap='summer'):
+def make_all_plots(alldata=None,maxnormfreq=15,maxnormkperp=15,cmap='summer'):
     w0,k0,w,dw,kpara,kperp = alldata
     # labels
     l1 = r'$k_\perp v_A/\Omega_i$'
     l2 = r'$k_\parallel v_A/\Omega_i$'
     l3 = r'$\omega/\Omega_i$'
     l4 = r'$\gamma/\Omega_i$'
-    # plot_k2d_growth(kpara,kperp,dw,norm=[w0,k0],cmap=cmap,labels=[l1,l2])
-    # plot_frq_growth(w,dw,kpara,maxw=maxnormfreq,norm=[w0,k0],labels=[l3,l4])
-    # # TODO; memory intensive, utilise 2d histograms (fixed #bins)
-    # plot_frq_kpara(kpara,w,dw,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
-    # plot_frq_kperp(w,dw,kperp,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
+    plot_k2d_growth(kpara,kperp,dw,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2])
+    plot_frq_growth(w,dw,kpara,maxw=maxnormfreq,norm=[w0,k0],labels=[l3,l4])
+    plot_frq_kpara(kpara,w,dw,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
+    plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
 
 #-#-#
@@ -237,8 +225,4 @@ if __name__ == '__main__':
 
 """
 TODO
-    /> parallelise loading and converting of HDF5 solutions2D_.jld to pkl
-        - issue : raise TypeError("h5py objects cannot be pickled")
-    > bin freq axis for freq vs k(para or perp) as too many unique freq values
-        - could also just shrink to anything below maxnormfreq used
 """
