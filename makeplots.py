@@ -163,7 +163,7 @@ def plot_frq_kperp(kperp,w,dw,maxk=None,maxw=None,norm=[None,None],cmap='summer'
     ax.plot([0,maxw],[0,maxw],linestyle='--',color='white')
     ax.set_ylim(0,maxk)
     ax.set_xlim(0,maxw)
-    fig.savefig('freq_kperp_growthrates_1.pdf',bbox_inches='tight')
+    fig.savefig('freq_kperp_growthrates.pdf',bbox_inches='tight')
     del Z
     print('plotted freq kperp')
     return None
