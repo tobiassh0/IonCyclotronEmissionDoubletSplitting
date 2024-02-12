@@ -20,6 +20,11 @@ def read_pkl(quant):
     # automatically closed when loaded due to "with" statement
     return array
 
+# extract peaks in a dataset (used for power spectra comparisons)	
+def extractPeaks(data,Nperw=1,prominence=0.3):
+	# tune till Nperw encapsulates all peaks (visually)
+	return signal.find_peaks(data,distance=Nperw,prominence=prominence)[0]
+
 def paraload(i,f,sols):
     print(i)
     wi,dwi=f[sols[i]][()][0]
@@ -79,9 +84,9 @@ def read_all_data(loc=''):
     return data
 
 def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,None),limits=False):
-    if rowval.shape != colval.shape and rowval.shape != val.shape:
+    if rowval.shape != colval.shape and rowval.shape != val.shape: # make sure same shape
         raise SystemError
-    if rowlim[0] != None or collim[0] != None:
+    if rowlim[0] != None or collim[0] != None: # check if limits applied
         # thresh to limit size
         thresh = (rowlim[0]<rowval) & (rowval<rowlim[1]) & (collim[0]<colval) & (colval<collim[1]) 
         rowval = rowval[thresh] ; colval = colval[thresh] ; val = val[thresh]
@@ -93,7 +98,7 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,No
         # min, max values from data
         rowmin, rowmax = [np.min(rowval),np.max(rowval)]
         colmin, colmax = [np.min(colval),np.max(colval)]
-    else:
+    else: # set bin size
         nx,ny=bins
         # min max values from user input
         rowmin, rowmax = rowlim
@@ -111,6 +116,24 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,No
         return Z, [colmin,colmax,rowmin,rowmax]
     else:
         return Z
+
+def make1D(xdata,ydata,maxnormx=None,norm=(1,1),bins=1000):
+    normx, normy = norm
+    if not maxnormx:
+        maxnormx = np.max(xdata)
+    thresh = xdata < maxnormx*normx
+    xdata = xdata[thresh] ; ydata = ydata[thresh]
+    # bin freq (x) axes
+    minx, maxx = [np.min(xdata),np.max(xdata)]
+    miny, maxy = [np.min(ydata),np.max(ydata)]
+    xarr = np.linspace(minx,maxx,bins)
+    Z = np.zeros(bins)
+    # find max value (y) in bin
+    for k in range(len(xdata)):
+        i = np.where(xdata[k] >= xarr)[0][-1] # last index corresponding to row
+        if Z[i] < ydata[k]:
+            Z[i]=ydata[k] # assign highest growth rate
+    return xarr, Z
 
 def plot_k2d_growth(kpara,kperp,dw,norm=[None,None],cmap='summer',clims=(None,None),labels=['','']):
     # make 2d matrix
@@ -196,6 +219,49 @@ def make_all_plots(alldata=None,maxnormfreq=15,maxnormkperp=15,cmap='summer'):
     plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
 
+def loop_over_xiT():
+    # loop over concentrations
+    home = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
+    freqs = []
+    gamma = []
+    txi2 = []
+    maxnormf = 18
+    fbins = 800
+    fig,ax=plt.subplots(figsize=(15,2))
+    ax.set_facecolor('#008066')
+    XI2 = [0.0,0.05,0.1,0.11,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+    for xi2 in XI2:
+        print(xi2)
+        solloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run_2.07_{}_0.01_-0.646_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(xi2)
+        os.chdir(solloc)
+        data=read_all_data(loc=solloc)
+        # make_all_plots(alldata=data)
+        w0,k0,w,dw,kpara,kperp = data
+        farr, growth = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
+        peaks = extractPeaks(growth,Nperw=8)
+        ## 3d plot
+        # ax.scatter(farr[peaks]/w0,xi2*np.ones(len(peaks)),growth[peaks]/w0,color='b')
+        # ax.plot(farr/w0,xi2*np.ones(len(farr)),growth/w0,color='k')
+        txi2.append([xi2]*len(peaks))
+        gamma.append(growth[peaks]/w0)
+        freqs.append(farr[peaks]/w0)
+
+    # plot integer deuteron harmonics
+    for i in range(0,maxnormf+1,1):
+        ax.axvline(i,color='darkgrey',linestyle='--')
+    # plot freqs vs. xi2 and gamma as color
+    for i in range(len(gamma)):
+        im = ax.scatter(freqs[i],txi2[i],c=gamma[i],marker='s',s=50,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
+    cbar = plt.colorbar(im)
+    cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
+    ax.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
+    ax.set_ylabel(r'$\xi_T$',**tnrfont)
+    ax.set_xlim(0,18.1)
+    ax.set_ylim(0,1)
+    fig.savefig('../freq_xiT_growth_summer.png',bbox_inches='tight')
+    plt.show()
+    return None
+
 #-#-#
 if __name__ == '__main__':
     ## PACKAGES
@@ -207,21 +273,15 @@ if __name__ == '__main__':
     plt.rcParams['axes.formatter.useoffset'] = False
     import pickle
     import h5py
+    from scipy import stats, signal
     # parallelising
     import multiprocessing as mp
     from functools import partial
     # other
     import os,sys
     ## BODY
-    # loop over concentrations
-    home = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
-    XI2 = [0.0,0.05,0.1,0.11,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
-    for xi2 in XI2:
-        print(xi2)
-        solloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run_2.07_{}_0.01_-0.646_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(xi2)
-        os.chdir(solloc)
-        data=read_all_data(loc=solloc)
-        make_all_plots(alldata=data)
+    loop_over_xiT()
+
 
 """
 TODO
