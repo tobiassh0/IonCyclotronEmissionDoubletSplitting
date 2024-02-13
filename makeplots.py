@@ -1,7 +1,11 @@
 """
-    Written by Tobias Slade-Harajda for the purpose of analysing LMV () solutions2D.jld files.
-    Functions dumpfiles() and read_pkl() are taken from my Thesis code to analyse EPOCH sims.
+    Written by Tobias Slade-Harajda for the purpose of analysing LMV 
+    (https://github.com/jwscook/IonCyclotronEmissionDoubletSplitting)
+    solutions2D.jld files. 
+    Functions dumpfiles() and read_pkl() are taken from my Thesis 
+    code to analyse EPOCH sims.
 """
+
 tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
 
 ## Dump pkl files
@@ -21,9 +25,9 @@ def read_pkl(quant):
     return array
 
 # extract peaks in a dataset (used for power spectra comparisons)	
-def extractPeaks(data,Nperw=1,prominence=0.3):
+def extractPeaks(data,Nperw=1,prominence=0.3,plateau_size=None):
 	# tune till Nperw encapsulates all peaks (visually)
-	return signal.find_peaks(data,distance=Nperw,prominence=prominence)[0]
+	return signal.find_peaks(data,distance=Nperw,prominence=prominence,plateau_size=plateau_size)[0]
 
 def paraload(i,f,sols):
     print(i)
@@ -202,7 +206,7 @@ def plot_frq_growth(w,dw,kpara,maxw=None,norm=[None,None],clims=(-1.5,1.5),label
     ax.set_ylabel(labels[1],**tnrfont)
     ax.set_xlim(0,maxw)
     ax.set_ylim(0,0.15)
-    fig.savefig('freq_growth.pdf',bbox_inches='tight')
+    fig.savefig('freq_growth.png',bbox_inches='tight')
     print('plotted freq growth')
     return None
 
@@ -219,52 +223,55 @@ def make_all_plots(alldata=None,maxnormfreq=15,maxnormkperp=15,cmap='summer'):
     plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxw=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
 
-def loop_over_xiT():
+def loop_over_xiT(homeloc=''):
     # loop over concentrations
-    home = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
     freqs = []
     gamma = []
     txi2 = []
     maxnormf = 18
     fbins = 800
     fig,ax=plt.subplots(figsize=(15,2))
-    ax.set_facecolor('#008066')
-    XI2 = [0.0,0.05,0.1,0.11,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+    ax.set_facecolor('#008066') # first color in summer heatmap
+
+    XI2 = np.array([i/200 for i in range(0,200,5) if (i/2)%5!=0])
     for xi2 in XI2:
         print(xi2)
-        solloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/run_2.07_{}_0.01_-0.646_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(xi2)
+        solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(xi2)
         os.chdir(solloc)
         data=read_all_data(loc=solloc)
         # make_all_plots(alldata=data)
+
         w0,k0,w,dw,kpara,kperp = data
         farr, growth = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
-        peaks = extractPeaks(growth,Nperw=8)
-        ## 3d plot
-        # ax.scatter(farr[peaks]/w0,xi2*np.ones(len(peaks)),growth[peaks]/w0,color='b')
-        # ax.plot(farr/w0,xi2*np.ones(len(farr)),growth/w0,color='k')
+        peaks = extractPeaks(growth,Nperw=8,plateau_size=0.5)
+
         txi2.append([xi2]*len(peaks))
         gamma.append(growth[peaks]/w0)
         freqs.append(farr[peaks]/w0)
+        
+        ## 3d plot
+        # ax.scatter(farr[peaks]/w0,xi2*np.ones(len(peaks)),growth[peaks]/w0,color='b')
+        # ax.plot(farr/w0,xi2*np.ones(len(farr)),growth/w0,color='k')
 
     # plot integer deuteron harmonics
     for i in range(0,maxnormf+1,1):
         ax.axvline(i,color='darkgrey',linestyle='--')
     # plot freqs vs. xi2 and gamma as color
     for i in range(len(gamma)):
-        im = ax.scatter(freqs[i],txi2[i],c=gamma[i],marker='s',s=50,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
+        im = ax.scatter(freqs[i],txi2[i],c=gamma[i],marker='s',s=25,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
     cbar = plt.colorbar(im)
     cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
     ax.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
     ax.set_ylabel(r'$\xi_T$',**tnrfont)
     ax.set_xlim(0,18.1)
     ax.set_ylim(0,1)
-    fig.savefig('../freq_xiT_growth_summer.png',bbox_inches='tight')
     plt.show()
+    fig.savefig('../freq_xiT_growth_summer.png',bbox_inches='tight')
     return None
 
 #-#-#
 if __name__ == '__main__':
-    ## PACKAGES
+    ## PACKAGES ## 
     # standard
     import numpy as np
     import matplotlib.pyplot as plt
@@ -279,10 +286,14 @@ if __name__ == '__main__':
     from functools import partial
     # other
     import os,sys
-    ## BODY
-    loop_over_xiT()
+
+    ## BODY ## 
+
+    ## one run file
+    # data=read_all_data(loc=LOC_FILE)
+    # make_all_plots(alldata=data)
+
+    # multiple run files
+    loop_over_xiT(homeloc="/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/")
 
 
-"""
-TODO
-"""

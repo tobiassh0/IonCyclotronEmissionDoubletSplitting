@@ -115,24 +115,24 @@ addprocs(nprocsadded, exeflags="--project")
   ze = -1
 
   # mass and charge of ions
-#  # D-T-α
-#  # masses
-#  m1 = md*mₑ
-#  m2 = mT*mₑ
-#  mmin = mα*mₑ
-#  # charge numbers
-#  z1 = 1
-#  z2 = 1
-#  zmin = 2
-  # D-He3-p
+  # D-T-α
   # masses
   m1 = md*mₑ
-  m2 = mHe3*mₑ
-  mmin = mp*mₑ
+  m2 = mT*mₑ
+  mmin = mα*mₑ
   # charge numbers
   z1 = 1
-  z2 = 2
-  zmin = 1
+  z2 = 1
+  zmin = 2
+  # D-He3-p
+  # masses
+#  m1 = md*mₑ
+#  m2 = mHe3*mₑ
+#  mmin = mp*mₑ
+#  # charge numbers
+#  z1 = 1
+#  z2 = 2
+#  zmin = 1
 
   # concentrations and densities
   # Fig 18 Cottrell 1993
@@ -644,7 +644,7 @@ function plotit(sols, file_extension=name_extension, fontsize=9)
 end
 
 
-if false#true
+if true#false
   @time plasmasols = findsolutions(Smmr)#d
 #  plasmasols = selectlargeestgrowthrate(plasmasols)
   mkpath(dirpath)

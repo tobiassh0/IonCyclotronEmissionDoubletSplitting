@@ -74,7 +74,7 @@ if __name__=='__main__':
 	majspec = 'Deuterons'
 	maj2spec = 'Tritons'
 	minspec = 'Alphas'
-	Emin = 3.5 # MeV
+	# Emin = 3.5 # MeV
 
 	# --- #
 
@@ -84,16 +84,17 @@ if __name__=='__main__':
 	m3, Z3 = mc.get(minspec)
 
 	# plasma parameters
-	B0 = 3.7 # T
-	n0 = 5e19 # 1/m^3
-	xi3 = 1e-3 #
-	n3 = xi3*n0 # 1/m^3
+	# B0 = 3.7 # T
+	# n0 = 5e19 # 1/m^3
+	# xi3 = 1e-3 #
+	# n3 = xi3*n0 # 1/m^3
 	# v0 = np.sqrt(2*Emin*qe/m3) # m/s
 	# vperp_vA = 0.9 #
 
-	xi2arr = np.arange(0,1.1,0.05) # concentrations
+	xi2arr = np.array([i/200 for i in range(0,200,5) if (i/2)%5!=0])
+	# xi2arr = np.arange(0,1.,0.025) # concentrations
 	print(xi2arr)
-	loop_generate(filename=name,_btext=btext,_n0=n0,_B0=B0,_xi3=xi3,_xi2arr=xi2arr)
+	loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr)
 
 	# # thermal spread and percentage
 	# th_spread_beam = ' 0.01'   # with spacing before
