@@ -1,3 +1,4 @@
+*.svg
 *.pkl
 *.txt
 *.pdf
@@ -6,6 +7,9 @@
 *.jld2
 *.jld
 *.png
+*.jpeg
+*.jpg
+*.mp4
 .DS_Store
 /DHe3_collection_old
 /DHe3_collection
