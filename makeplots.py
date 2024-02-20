@@ -120,10 +120,13 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,No
         # min, max values from data
         rowmin, rowmax = [np.min(rowval),np.max(rowval)]
         colmin, colmax = [np.min(colval),np.max(colval)]
-    # try loading data first
+    # if dumping, then expect to load a file, otherwise calculate
     try:
-        Z = read_pkl(name)
-        [colmin,colmax,rowmin,rowmax] = read_pkl(name+'_ext')
+        if dump:
+            Z = read_pkl(name)
+            [colmin,colmax,rowmin,rowmax] = read_pkl(name+'_ext')
+        else:
+            raise SystemError
     except: # can't load data
         if bins[0] == None: # no bins
             # unique values
@@ -175,15 +178,18 @@ def make1D(xdata,ydata,maxnormx=None,norm=(1,1),bins=1000):
     return xarr, Z
 
 # plot the contour lines of integer multiples of the cyclotron frequency (not smooth)
-def plotCycContours(fig,ax,kpara,kperp,w,norm=[1,1],maxnormf=15,rowlim=(None,None),collim=(None,None),\
-                    bins=(1000,1000),extents=None,dump=True):
-    try:
-        w2d = read_pkl('k2d_wcyc')
-    except:
-        w2d = make2D(kpara,kperp,w,rowlim=rowlim,collim=collim,bins=bins,limits=False)
-        if dump: dumpfiles(w2d,'k2d_wcyc')
-    
-    ax.contour(np.rint(w2d/norm[0]),levels=range(maxnormf),origin='lower',colors='w',extent=np.array(extents)/norm[1],alpha=0.2)
+def plotCycContours(fig,ax,norm=[1,1],maxnormf=15,rowlim=(None,None),collim=(None,None),bins=(1000,1000),ALPHA=0.2):
+    # get frequency meshgrid as per FAW dispersion (Eq. 9 in DOI: 10.1088/1361-6587/ac8ba4)
+    VA = getVa(norm[0],norm[1])
+    kpara = np.linspace(rowlim[0],rowlim[1],1000)
+    kperp = np.linspace(collim[0],collim[1],1000)
+    KPERP, KPARA = np.meshgrid(kperp,kpara)
+    K2 = KPARA**2 + KPERP**2
+    W2 = ((VA**2)/2)*(K2 + KPARA**2 + (K2*KPARA**2)*((VA**2)/(norm[0]**2)) + \
+            ((K2 + KPARA**2 + (K2*KPARA**2)*(VA**2)/(norm[0]**2))**2 - 4*K2*KPARA**2)**0.5)
+    extents = np.array([collim[0],collim[1],rowlim[0],rowlim[1]])/norm[1]
+
+    ax.contour(np.sqrt(W2)/norm[0],levels=range(0,maxnormf,1),origin='lower',colors='k',alpha=ALPHA,extent=extents)
     ax.plot([0,maxnormf],[0,0],color='darkgrey',linestyle='--')
     return fig, ax
 
@@ -200,11 +206,100 @@ def plot_k2d_growth(kpara,kperp,dw,w,norm=[None,None],cmap='summer',clims=(None,
     ax.set_xlabel(labels[0],**tnrfont)
     ax.set_ylabel(labels[1],**tnrfont)
     if contours:
-        fig,ax=plotCycContours(fig,ax,kpara,kperp,w,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),\
-                               extents=extents,bins=(1000,1000))
+        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),maxnormf=15)
     fig.savefig('kperp_kpara_growthrates.pdf',bbox_inches='tight')
     del Z
     print('plotted k2d')
+    return None
+
+# plot kperp vs. kpara with growth rate heatmap for a range (loop) of concentrations
+def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
+    fig = plt.figure(figsize=(10,10))
+
+    # base (largest fig)
+    gs1 = GridSpec(4, 10, bottom=0.53, top=0.98, left=0.05, right=0.95, wspace=0.0, hspace=0.075)# bottom spacing creates space for gs2 
+    ax1 = fig.add_subplot(gs1[:, :])                                # 0
+    # loop (zoomed figs)
+    gs2 = GridSpec(8, 10, bottom=0.05, top=0.49, left=0.05, right=0.95, wspace=0.15, hspace=0.15) # nrows, ncols, l, r, wsp, hsp
+    ax11 = fig.add_subplot(gs2[:4, :2])                             # 1
+    ax12 = fig.add_subplot(gs2[:4, 2:4],sharey=ax11)                # 2
+    ax13 = fig.add_subplot(gs2[:4, 4:6],sharey=ax11)                # 3
+    ax14 = fig.add_subplot(gs2[:4, 6:8],sharey=ax11)                # 4
+    ax15 = fig.add_subplot(gs2[:4, 8:10],sharey=ax11)               # 5
+    ax21 = fig.add_subplot(gs2[4:, :2],sharey=ax11)                 # 6
+    ax22 = fig.add_subplot(gs2[4:, 2:4],sharey=ax11)                # 7
+    ax23 = fig.add_subplot(gs2[4:, 4:6],sharey=ax11)                # 8 
+    ax24 = fig.add_subplot(gs2[4:, 6:8],sharey=ax11)                # 9 
+    ax25 = fig.add_subplot(gs2[4:, 8:10],sharey=ax11)               # 10
+
+    allax = fig.axes
+    ignorex(allax)
+    ignorey(allax)
+
+    # plotting data
+    i=0
+    for ax in fig.axes:
+        print(loop[i])
+        solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(loop[i])
+        os.chdir(solloc)
+        data=read_all_data(loc=solloc)
+        w0,k0,w,dw,kpara,kperp = data
+        norm = [w0,k0]
+        try:
+            Z = read_pkl('k2d_growth')
+            extents = read_pkl('k2d_growth_ext')
+        except:
+            Z,extents=make2D(kpara,kperp,dw,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),\
+                                bins=(1000,1000),limits=True,dump=True,name='k2d_growth') # y, x, val
+        im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
+        if i==0:
+            fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]))
+        # ax.plot([0,15],[-1,1])
+        ax.annotate("{:.2f}".format(loop[i]), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
+        i+=1
+
+    # formatting    
+    for i in range(len(allax)):
+        if i == 0:
+            allax[i].tick_params(labelleft=True,labelbottom=True)
+        if i == 1:
+            allax[i].tick_params(labelleft=True)
+            allax[i].set_xticks([-1,0,1])
+        if i == (len(loop)-1)//2+1:
+            allax[i].tick_params(labelleft=True,labelbottom=True)
+            allax[i].set_xticks([-1,0,1])
+        if i > (len(loop)-1)//2+1:
+            allax[i].tick_params(labelbottom=True)
+        
+        if i == len(allax)-1:
+            allax[i].set_xticks([11,12,13,14,15])
+            allax[i].set_xticklabels(['11','12','13','14','15'])
+        elif i >= (len(loop)-1)//2+1:
+            allax[i].set_xticks([11,12,13,14])
+            allax[i].set_xticklabels(['11','12','13','14'])
+        else:
+            None
+
+        if i != 0:
+            allax[i].set_xlim(11,15)
+            allax[i].set_ylim(-1,1)
+
+    # ax_group = fig.add_subplot(gs2[-1, 0:10])
+    # ax_group.set_xticks([])
+    # ax_group.set_yticks([])
+    # ax_group.set_frame_on(False)
+    # ax_group.set_xlabel("Group label!", labelpad=20)
+
+    # colorbar
+    p0 = ax1.get_position().get_points().flatten()
+    # im = ax1.imshow([[0,1],[0,1]],aspect='auto',origin='lower')
+    cbar = fig.add_axes([p0[2]+0.02, 0.05, 0.01, p0[3]-0.05]) # [left bottom width height]
+                      # [0.97,0.05,0.01,0.93]
+    plt.colorbar(im, cax=cbar, orientation='vertical')
+    cbar.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
+    # plt.show()
+    fig.savefig('../kperp_kpara_growthrates_combined.pdf',bbox_inches='tight')
+
     return None
 
 # plot frequency vs. kpara with growth rate heatmap
@@ -370,88 +465,6 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,plot_2D=True,plot_3D=Fa
         fig.savefig('../freq_xiT_growth_summer.png',bbox_inches='tight')
     return None
 
-# plot kperp vs. kpara with growth rate heatmap for a range (loop) of concentrations
-def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
-    fig = plt.figure(figsize=(10,10))
-
-    # base (largest fig)
-    gs1 = GridSpec(4, 10, bottom=0.53, top=0.98, left=0.05, right=0.95, wspace=0.0, hspace=0.075)# bottom spacing creates space for gs2 
-    ax1 = fig.add_subplot(gs1[:, :])                                # 0
-    # loop (zoomed figs)
-    gs2 = GridSpec(8, 10, bottom=0.05, top=0.49, left=0.05, right=0.95, wspace=0.15, hspace=0.15) # nrows, ncols, l, r, wsp, hsp
-    ax11 = fig.add_subplot(gs2[:4, :2])                             # 1
-    ax12 = fig.add_subplot(gs2[:4, 2:4],sharey=ax11)                # 2
-    ax13 = fig.add_subplot(gs2[:4, 4:6],sharey=ax11)                # 3
-    ax14 = fig.add_subplot(gs2[:4, 6:8],sharey=ax11)                # 4
-    ax15 = fig.add_subplot(gs2[:4, 8:10],sharey=ax11)               # 5
-    ax21 = fig.add_subplot(gs2[4:, :2],sharey=ax11)                 # 6
-    ax22 = fig.add_subplot(gs2[4:, 2:4],sharey=ax11)                # 7
-    ax23 = fig.add_subplot(gs2[4:, 4:6],sharey=ax11)                # 8 
-    ax24 = fig.add_subplot(gs2[4:, 6:8],sharey=ax11)                # 9 
-    ax25 = fig.add_subplot(gs2[4:, 8:10],sharey=ax11)               # 10
-
-    allax = fig.axes
-    ignorex(allax)
-    ignorey(allax)
-
-    # plotting data
-    i=0
-    for ax in fig.axes:
-        print(loop[i])
-        solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(loop[i])
-        os.chdir(solloc)
-        data=read_all_data(loc=solloc)
-        w0,k0,w,dw,kpara,kperp = data
-        norm = [w0,k0]
-        Z,extents=make2D(kpara,kperp,dw,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),\
-                            bins=(1000,1000),limits=True) # y, x, val
-        im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
-        # ax.plot([0,15],[-1,1])
-        ax.annotate("{:.2f}".format(loop[i]), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
-        i+=1
-
-    # formatting    
-    for i in range(len(allax)):
-        if i == 0:
-            allax[i].tick_params(labelleft=True,labelbottom=True)
-        if i == 1:
-            allax[i].tick_params(labelleft=True)
-            allax[i].set_xticks([-1,0,1])
-        if i == (len(loop)-1)//2+1:
-            allax[i].tick_params(labelleft=True,labelbottom=True)
-            allax[i].set_xticks([-1,0,1])
-        if i > (len(loop)-1)//2+1:
-            allax[i].tick_params(labelbottom=True)
-        
-        if i == len(allax)-1:
-            allax[i].set_xticks([11,12,13,14,15])
-            allax[i].set_xticklabels(['11','12','13','14','15'])
-        elif i >= (len(loop)-1)//2+1:
-            allax[i].set_xticks([11,12,13,14])
-            allax[i].set_xticklabels(['11','12','13','14'])
-        else:
-            None
-
-        if i != 0:
-            allax[i].set_xlim(11,15)
-            allax[i].set_ylim(-1,1)
-
-    # ax_group = fig.add_subplot(gs2[-1, 0:10])
-    # ax_group.set_xticks([])
-    # ax_group.set_yticks([])
-    # ax_group.set_frame_on(False)
-    # ax_group.set_xlabel("Group label!", labelpad=20)
-
-    # colorbar
-    p0 = ax1.get_position().get_points().flatten()
-    # im = ax1.imshow([[0,1],[0,1]],aspect='auto',origin='lower')
-    cbar = fig.add_axes([p0[2]+0.02, 0.05, 0.01, p0[3]-0.05]) # [left bottom width height]
-                      # [0.97,0.05,0.01,0.93]
-    plt.colorbar(im, cax=cbar, orientation='vertical')
-    cbar.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
-    fig.savefig('../kperp_kpara_growthrates_combined.pdf',bbox_inches='tight')
-
-    return None
 
 #-#-#
 if __name__ == '__main__':
@@ -475,19 +488,29 @@ if __name__ == '__main__':
 
     ## BODY ## 
     homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
+    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/"
 
     ## one file
     # data=read_all_data(loc=LOC_FILE)
     # make_all_plots(alldata=data)
     XI2 = [i/200 for i in range(0,200,5)]
-    XI2 = [0.11]
     for xi2 in XI2:
         print(xi2)
-        solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
+        # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
+        solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/".format(xi2)
         os.chdir(solloc)
         data=read_all_data(loc=solloc)
         w0,k0,w,dw,kpara,kperp = data
         make_all_plots(alldata=data)
+        # fig, ax = plt.subplots(figsize=(8,6))
+        # Z,extents = make2D(kpara,kperp,w,rowlim=(-4*k0,4*k0),collim=(0,15*k0),dump=True,name='freq_k2d',limits=True,bins=(800,800))
+
+        # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
+        # cbar = plt.colorbar(im)
+        # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),ALPHA=1)
+        # for i in range(15):
+        #     ax.axvline(i,linestyle='--',color='k')
+        # plt.show()
     sys.exit()
  
     # multiple files

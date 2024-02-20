@@ -70,7 +70,7 @@ if __name__=='__main__':
 
 	# D-T (JET like)
 	name  = 'D_T_JET'
-	btext = '../julia-1.9.3/bin/julia --proj LMV.jl '
+	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --kperpmax 25 --ngridpoints 2048 '
 	majspec = 'Deuterons'
 	maj2spec = 'Tritons'
 	minspec = 'Alphas'
@@ -91,7 +91,7 @@ if __name__=='__main__':
 	# v0 = np.sqrt(2*Emin*qe/m3) # m/s
 	# vperp_vA = 0.9 #
 
-	xi2arr = np.array([i/200 for i in range(0,200,5) if (i/2)%5!=0])
+	xi2arr = np.array([i/200 for i in range(0,200,5)])# if (i/2)%5!=0])
 	# xi2arr = np.arange(0,1.,0.025) # concentrations
 	print(xi2arr)
 	loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr)

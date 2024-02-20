@@ -89,7 +89,7 @@ const _n0 = parsedargs["electronDensity"]
 # name of file
 const name_extension = parsedargs["nameextension"]
 dir = dirname(pwd())
-const dirpath = mapreduce(i->"_$(i[2])", *, parsedargs; init="$dir/ICE_DS/JET26148/default_params_with_Triton_concentration/run")
+const dirpath = mapreduce(i->"_$(i[2])", *, parsedargs; init="$dir/ICE_DS/run") # /JET26148/default_params_with_Triton_concentration/
 @show dirpath
 const filecontents = [i for i in readlines(open(@__FILE__))]
 const nprocsadded = div(Sys.CPU_THREADS, 2)
