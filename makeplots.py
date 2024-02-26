@@ -178,7 +178,9 @@ def make1D(xdata,ydata,maxnormx=None,norm=(1,1),bins=1000):
     return xarr, Z
 
 # plot the contour lines of integer multiples of the cyclotron frequency (not smooth)
-def plotCycContours(fig,ax,norm=[1,1],maxnormf=15,rowlim=(None,None),collim=(None,None),bins=(1000,1000),ALPHA=0.2):
+def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(None,None),bins=(1000,1000),ALPHA=0.5,levels=None):
+    if not levels:
+        levels = range(0,maxnormf+1,1)
     # get frequency meshgrid as per FAW dispersion (Eq. 9 in DOI: 10.1088/1361-6587/ac8ba4)
     VA = getVa(norm[0],norm[1])
     kpara = np.linspace(rowlim[0],rowlim[1],1000)
@@ -189,7 +191,7 @@ def plotCycContours(fig,ax,norm=[1,1],maxnormf=15,rowlim=(None,None),collim=(Non
             ((K2 + KPARA**2 + (K2*KPARA**2)*(VA**2)/(norm[0]**2))**2 - 4*K2*KPARA**2)**0.5)
     extents = np.array([collim[0],collim[1],rowlim[0],rowlim[1]])/norm[1]
 
-    ax.contour(np.sqrt(W2)/norm[0],levels=range(0,maxnormf,1),origin='lower',colors='k',alpha=ALPHA,extent=extents)
+    ax.contour(np.sqrt(W2)/norm[0],levels=levels,origin='lower',colors='white',alpha=ALPHA,extent=extents)
     ax.plot([0,maxnormf],[0,0],color='darkgrey',linestyle='--')
     return fig, ax
 
@@ -254,6 +256,8 @@ def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
         im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
         if i==0:
             fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]))
+        else:
+            fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),levels=[12,13,14,15])        
         # ax.plot([0,15],[-1,1])
         ax.annotate("{:.2f}".format(loop[i]), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
         i+=1
@@ -264,13 +268,15 @@ def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
             allax[i].tick_params(labelleft=True,labelbottom=True)
         if i == 1:
             allax[i].tick_params(labelleft=True)
-            allax[i].set_xticks([-1,0,1])
+            allax[i].set_yticks([-1,-0.5,0,0.5,1])
         if i == (len(loop)-1)//2+1:
             allax[i].tick_params(labelleft=True,labelbottom=True)
-            allax[i].set_xticks([-1,0,1])
+            allax[i].set_yticks([-1,-0.5,0,0.5,1])
         if i > (len(loop)-1)//2+1:
             allax[i].tick_params(labelbottom=True)
-        
+        if i > 0:
+	         allax[i].set_xticks([11,12,13,14,15])
+
         if i == len(allax)-1:
             allax[i].set_xticks([11,12,13,14,15])
             allax[i].set_xticklabels(['11','12','13','14','15'])
@@ -283,6 +289,9 @@ def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
         if i != 0:
             allax[i].set_xlim(11,15)
             allax[i].set_ylim(-1,1)
+        else:
+            allax[i].set_xlim(0,15)
+            allax[i].set_ylim(-4,4)
 
     # ax_group = fig.add_subplot(gs2[-1, 0:10])
     # ax_group.set_xticks([])
@@ -407,21 +416,34 @@ def make_all_plots(alldata=None,maxnormfreq=15,maxnormkperp=15,cmap='summer'):
     return None
 
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
-def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,plot_2D=True,plot_3D=False):
+def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
+    plot_2D=kwargs.get('plot_2D')
+    plot_3D=kwargs.get('plot_3D')
+    plot_hm=kwargs.get('plot_hm')
+    if sum(filter(None,[plot_2D,plot_3D,plot_hm])) > 1 or sum(filter(None,[plot_2D,plot_3D,plot_hm])) < 1:
+        print('# ERROR # :: defaulting to heatmap')
+        plot_hm=True ; plot_2D=False ; plot_3D=False
+    
     if plot_2D:
         # 2d colormap
         fig2d,ax2d=plt.subplots(figsize=(15,2))
         ax2d.set_facecolor('#008066') # first color in summer heatmap
-        x = [] ; y = [] ; z = []
+        x = [] ; y = []
     if plot_3D:
         # 3d surface
         fig3d,ax3d=plt.subplots(figsize=(10,6),subplot_kw={'projection':'3d'})
         x = np.linspace(0,maxnormf,fbins)	 
         X,Y = np.meshgrid(x,loop)
+    if plot_hm:
+        # imshow array
+        fighm,axhm=plt.subplots(figsize=(15,2))
+        x=[];y=[]
+    z=[]
+    growth_hm=np.zeros((len(loop),fbins))
     # loop over concentrations
-    for l in loop:
-        print(l)
-        solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024".format(l)
+    for i in range(len(loop)):
+        print(loop[i])
+        solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(loop[i])
         os.chdir(solloc)
         data=read_all_data(loc=solloc)
         # make_all_plots(alldata=data)
@@ -432,8 +454,9 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,plot_2D=True,plot_3D=Fa
         # 2D plot
         peaks = extractPeaks(zarr,Nperw=8,plateau_size=0.5)
         x.append(xarr[peaks]/w0)
-        y.append([l]*len(peaks))# xi2 concentration constant
+        y.append([loop[i]]*len(peaks))# xi2 concentration constant
         z.append(zarr[peaks]/w0)
+        growth_hm[i,:]=zarr/w0
         ## 3D plot
         # ax.scatter(farr[peaks]/w0,l*np.ones(len(peaks)),growth[peaks]/w0,color='b')
         # ax.plot(farr/w0,l*np.ones(len(farr)),growth/w0,color='k')
@@ -462,7 +485,20 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,plot_2D=True,plot_3D=Fa
         ax2d.set_ylabel(r'$\xi_T$',**tnrfont)
         ax2d.set_xlim(0,maxnormf+0.1)
         ax2d.set_ylim(0,1)
-        fig.savefig('../freq_xiT_growth_summer.png',bbox_inches='tight')
+        fig.savefig('../freq_xiT_growth_peaks.png',bbox_inches='tight')
+    if plot_hm:
+        # plot integer deuteron harmonics
+        for i in range(0,maxnormf+1,1):
+            axhm.axvline(i,color='darkgrey',linestyle='--')
+        im = axhm.imshow(growth_hm,origin='lower',aspect='auto',extent=[0,maxnormf,0,1],cmap='summer',interpolation='none',clim=(0,0.15))
+        cbar=plt.colorbar(im)
+        cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
+        # for i in range(len(x)):
+            # im = axhm.scatter(x[i],y[i],facecolor='none',marker='s',s=12,edgecolor='k',alpha=0.5)
+        axhm.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
+        axhm.set_ylabel(r'$\xi_T$',**tnrfont)
+        fighm.savefig('../freq_xiT_growth_all.png',bbox_inches='tight')
+        plt.show()
     return None
 
 
@@ -487,31 +523,33 @@ if __name__ == '__main__':
     import os,sys
 
     ## BODY ## 
-    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
     homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/"
+    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
 
     ## one file
     # data=read_all_data(loc=LOC_FILE)
     # make_all_plots(alldata=data)
     XI2 = [i/200 for i in range(0,200,5)]
-    for xi2 in XI2:
-        print(xi2)
-        # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
-        solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/".format(xi2)
-        os.chdir(solloc)
-        data=read_all_data(loc=solloc)
-        w0,k0,w,dw,kpara,kperp = data
-        make_all_plots(alldata=data)
-        # fig, ax = plt.subplots(figsize=(8,6))
-        # Z,extents = make2D(kpara,kperp,w,rowlim=(-4*k0,4*k0),collim=(0,15*k0),dump=True,name='freq_k2d',limits=True,bins=(800,800))
+    print(XI2)
+        
+    # for xi2 in XI2:
+        # print(xi2)
+        # # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
+        # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/".format(xi2)
+        # os.chdir(solloc)
+        # data=read_all_data(loc=solloc)
+        # w0,k0,w,dw,kpara,kperp = data
+        # make_all_plots(alldata=data)
+        # # fig, ax = plt.subplots(figsize=(8,6))
+        # # Z,extents = make2D(kpara,kperp,w,rowlim=(-4*k0,4*k0),collim=(0,15*k0),dump=True,name='freq_k2d',limits=True,bins=(800,800))
 
-        # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
-        # cbar = plt.colorbar(im)
-        # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),ALPHA=1)
-        # for i in range(15):
-        #     ax.axvline(i,linestyle='--',color='k')
-        # plt.show()
-    sys.exit()
+        # # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
+        # # cbar = plt.colorbar(im)
+        # # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),ALPHA=1)
+        # # for i in range(15):
+        # #    ax.axvline(i,linestyle='--',color='k')
+        # # plt.show()
+    # sys.exit()
  
     # multiple files
     # get_peak_freqs(loop=XI2,home=homeloc)
