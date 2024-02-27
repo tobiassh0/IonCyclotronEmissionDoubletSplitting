@@ -30,23 +30,28 @@ def loop_generate(**kwargs): # filename, btext, narr, Barr, Eminarr):
 	xi2arr = kwargs.get('_xi2arr')
 	xi3 = kwargs.get('_xi3')
 
-	# singular loop over concentrations
+	# singular loops 
+	m1, Z1 = mc.get('Deuterons')
+	m2, Z2 = mc.get('Tritons')
+	m3, Z3 = mc.get('Alphas')
+	# over concentration
 	with open(fname+'.txt','a') as file:
 		for xi2 in xi2arr:
 			print(xi2)
-			# rho0 = xi1*m1 + xi2*m2 + xi3*m3
-			# vA = B0/np.sqrt(mu0*n0*rho0)
-			# vperp = vA*vperp_vA
-			# vpara = np.sqrt(v0**2 - vperp**2)
-			# vpara_v0 = vpara/v0
-			# print(vpara_v0)
-			# # quasi-neutrality
-			# n2 = xi2*n0
-			# n1 = (n0/Z1)*(1-xi2*Z2-xi3*Z3)
-			# xi1 = n1/n0
-			# if not (n0 == (n1*Z1+n2*Z2+n3*Z3)): #  @assert quasi-neutrality
-			# raise SystemExit
-			file.write(btext+'--secondfuelionconcentrationratio'+' '+str(xi2)+'\n') # +' --nameextension '+str(np.around(Emin,2))+'MeV'+'\n'
+			xi1 = (1/Z1)*(1-Z2*xi2-Z3*xi3) # varies
+			xi1prime = (1/Z1)*(1-xi3*Z3) # const
+			upper = m2-(Z2/Z1)*m1
+			lower = (m1/Z1)+xi3*(m3-(Z3/Z1)*m1)
+			neprime = n0*(1+xi2*(upper/lower))
+			# VA_T = B0/np.sqrt(mu0*n0*(xi1*m1+xi2*m2+xi3*m3))
+			# VA_noT = B0/np.sqrt(mu0*neprime*(xi1prime*m1+xi3*m3))
+			file.write(btext+'--electronDensity'+' '+str(neprime)+' --nameextension '+str(np.around(xi2,3))+'\n')
+			# file.write(btext+'--secondfuelionconcentrationratio'+' '+str(xi2)+'\n') # +' --nameextension '+str(np.around(Emin,2))+'MeV'+'\n'
+
+	# # over electron number density
+	# with open(fname+'.txt','a') as file:
+	# 	for ne in narr:			
+	# 		file.write(btext+'--electronDensity'+' '+str(ne)+'\n')
 
 	# # multiple loops over parameters
 	# with open(fname+'.txt', 'a') as file:
@@ -69,8 +74,8 @@ if __name__=='__main__':
 	# Emin = 14.68 # MeV
 
 	# D-T (JET like)
-	name  = 'D_T_JET'
-	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --kperpmax 25 --ngridpoints 2048 '
+	name  = 'D_JET'
+	btext = '../julia-1.9.3/bin/julia --proj LMV.jl '
 	majspec = 'Deuterons'
 	maj2spec = 'Tritons'
 	minspec = 'Alphas'
@@ -94,7 +99,7 @@ if __name__=='__main__':
 	xi2arr = np.array([i/200 for i in range(0,200,5)])# if (i/2)%5!=0])
 	# xi2arr = np.arange(0,1.,0.025) # concentrations
 	print(xi2arr)
-	loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr)
+	loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr,_n0=1.7e19,_B0=2.07,_xi3=1.5e-4)
 
 	# # thermal spread and percentage
 	# th_spread_beam = ' 0.01'   # with spacing before

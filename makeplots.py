@@ -428,7 +428,7 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
         # 2d colormap
         fig2d,ax2d=plt.subplots(figsize=(15,2))
         ax2d.set_facecolor('#008066') # first color in summer heatmap
-        x = [] ; y = []
+        x=[];y=[]
     if plot_3D:
         # 3d surface
         fig3d,ax3d=plt.subplots(figsize=(10,6),subplot_kw={'projection':'3d'})
@@ -446,11 +446,9 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
         solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(loop[i])
         os.chdir(solloc)
         data=read_all_data(loc=solloc)
-        # make_all_plots(alldata=data)
 
         w0,k0,w,dw,kpara,kperp = data
         xarr, zarr = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
-        z.append(zarr/w0)
         # 2D plot
         peaks = extractPeaks(zarr,Nperw=8,plateau_size=0.5)
         x.append(xarr[peaks]/w0)
@@ -479,13 +477,19 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
         # plot freqs vs. xi2 and gamma as color
         for i in range(len(z)):
             im = ax2d.scatter(x[i],y[i],c=z[i],marker='s',s=25,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
+        # plot two trend lines
+        ax2d.plot([9.5,10],[1,0],linestyle='--',color='k',alpha=0.75)
+        ax2d.annotate('A',xy=(9.3,0.8),xycoords='data')
+        ax2d.plot([4.5,10],[1.05,0],linestyle='--',color='k',alpha=0.75)
+        ax2d.annotate('B',xy=(6,0.6),xycoords='data')
+        # colorbar, labelling and other formatting
         cbar = plt.colorbar(im)
-        cbar.ax2d.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
+        cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         ax2d.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         ax2d.set_ylabel(r'$\xi_T$',**tnrfont)
         ax2d.set_xlim(0,maxnormf+0.1)
         ax2d.set_ylim(0,1)
-        fig.savefig('../freq_xiT_growth_peaks.png',bbox_inches='tight')
+        fig2d.savefig('../freq_xiT_growth_peaks_labelled.png',bbox_inches='tight')
     if plot_hm:
         # plot integer deuteron harmonics
         for i in range(0,maxnormf+1,1):
@@ -533,26 +537,26 @@ if __name__ == '__main__':
     print(XI2)
         
     # for xi2 in XI2:
-        # print(xi2)
-        # # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
-        # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/".format(xi2)
-        # os.chdir(solloc)
-        # data=read_all_data(loc=solloc)
-        # w0,k0,w,dw,kpara,kperp = data
-        # make_all_plots(alldata=data)
-        # # fig, ax = plt.subplots(figsize=(8,6))
-        # # Z,extents = make2D(kpara,kperp,w,rowlim=(-4*k0,4*k0),collim=(0,15*k0),dump=True,name='freq_k2d',limits=True,bins=(800,800))
+    #     print(xi2)
+    #     # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
+    #     solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/".format(xi2)
+    #     os.chdir(solloc)
+    #     data=read_all_data(loc=solloc)
+    #     w0,k0,w,dw,kpara,kperp = data
+    #     make_all_plots(alldata=data)
+    #     # fig, ax = plt.subplots(figsize=(8,6))
+    #     # Z,extents = make2D(kpara,kperp,w,rowlim=(-4*k0,4*k0),collim=(0,15*k0),dump=True,name='freq_k2d',limits=True,bins=(800,800))
 
-        # # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
-        # # cbar = plt.colorbar(im)
-        # # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),ALPHA=1)
-        # # for i in range(15):
-        # #    ax.axvline(i,linestyle='--',color='k')
-        # # plt.show()
-    # sys.exit()
+    #     # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
+    #     # cbar = plt.colorbar(im)
+    #     # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),ALPHA=1)
+    #     # for i in range(15):
+    #     #    ax.axvline(i,linestyle='--',color='k')
+    #     # plt.show()
  
     # multiple files
-    # get_peak_freqs(loop=XI2,home=homeloc)
+    get_peak_freqs(loop=XI2,home=homeloc,plot_2D=True)
+    sys.exit()
     XI2 = [i/100 for i in range(45,95,5)]
     XI2.append(0)
     XI2 = np.sort(XI2)
