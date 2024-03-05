@@ -29,24 +29,32 @@ def loop_generate(**kwargs): # filename, btext, narr, Barr, Eminarr):
 	n0 = kwargs.get('_n0')
 	xi2arr = kwargs.get('_xi2arr')
 	xi3 = kwargs.get('_xi3')
+	pitcharr = kwargs.get('_pitcharr')
+	print(Eminarr,pitcharr)
 
 	# singular loops 
 	m1, Z1 = mc.get('Deuterons')
 	m2, Z2 = mc.get('Tritons')
 	m3, Z3 = mc.get('Alphas')
-	# over concentration
+
+	# # over concentration
+	# with open(fname+'.txt','a') as file:
+	# 	for xi2 in xi2arr:
+	# 		print(xi2)
+	# 		xi1 = (1/Z1)*(1-Z2*xi2-Z3*xi3) # varies
+	# 		xi1prime = (1/Z1)*(1-xi3*Z3) # const
+	# 		upper = m2-(Z2/Z1)*m1
+	# 		lower = (m1/Z1)+xi3*(m3-(Z3/Z1)*m1)
+	# 		neprime = n0*(1+xi2*(upper/lower))
+	# 		# VA_T = B0/np.sqrt(mu0*n0*(xi1*m1+xi2*m2+xi3*m3))
+	# 		# VA_noT = B0/np.sqrt(mu0*neprime*(xi1prime*m1+xi3*m3))
+	# 		file.write(btext+'--electronDensity '+str(neprime)+' --nameextension '+str(np.around(xi2,3))+'\n')
+	# 		# file.write(btext+'--secondfuelionconcentrationratio'+' '+str(xi2)+'\n') # +' --nameextension '+str(np.around(Emin,2))+'MeV'+'\n'
+
+	# over energy and pitch
 	with open(fname+'.txt','a') as file:
-		for xi2 in xi2arr:
-			print(xi2)
-			xi1 = (1/Z1)*(1-Z2*xi2-Z3*xi3) # varies
-			xi1prime = (1/Z1)*(1-xi3*Z3) # const
-			upper = m2-(Z2/Z1)*m1
-			lower = (m1/Z1)+xi3*(m3-(Z3/Z1)*m1)
-			neprime = n0*(1+xi2*(upper/lower))
-			# VA_T = B0/np.sqrt(mu0*n0*(xi1*m1+xi2*m2+xi3*m3))
-			# VA_noT = B0/np.sqrt(mu0*neprime*(xi1prime*m1+xi3*m3))
-			file.write(btext+'--electronDensity'+' '+str(neprime)+' --nameextension '+str(np.around(xi2,3))+'\n')
-			# file.write(btext+'--secondfuelionconcentrationratio'+' '+str(xi2)+'\n') # +' --nameextension '+str(np.around(Emin,2))+'MeV'+'\n'
+		for i in range(len(Eminarr)):
+			file.write(btext+'--minorityenergyMeV '+str(Eminarr[i])+' --pitch '+str(pitcharr[i])+'\n')
 
 	# # over electron number density
 	# with open(fname+'.txt','a') as file:
@@ -74,8 +82,8 @@ if __name__=='__main__':
 	# Emin = 14.68 # MeV
 
 	# D-T (JET like)
-	name  = 'D_JET'
-	btext = '../julia-1.9.3/bin/julia --proj LMV.jl '
+	name  = 'DT_JET_Energy'
+	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --secondfuelionconcentrationratio 0.11 '
 	majspec = 'Deuterons'
 	maj2spec = 'Tritons'
 	minspec = 'Alphas'
@@ -88,18 +96,28 @@ if __name__=='__main__':
 	m2, Z2 = mc.get(maj2spec)
 	m3, Z3 = mc.get(minspec)
 
-	# plasma parameters
-	# B0 = 3.7 # T
-	# n0 = 5e19 # 1/m^3
-	# xi3 = 1e-3 #
-	# n3 = xi3*n0 # 1/m^3
-	# v0 = np.sqrt(2*Emin*qe/m3) # m/s
-	# vperp_vA = 0.9 #
+	# # loop over tritium concentration for fixed electron number density
+	# xi2arr = np.array([i/200 for i in range(0,200,5)])# if (i/2)%5!=0])
+	# # xi2arr = np.arange(0,1.,0.025) # concentrations
+	# print(xi2arr)
+	# loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr,_n0=1.7e19,_B0=2.07,_xi3=1.5e-4)
 
-	xi2arr = np.array([i/200 for i in range(0,200,5)])# if (i/2)%5!=0])
-	# xi2arr = np.arange(0,1.,0.025) # concentrations
-	print(xi2arr)
-	loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr,_n0=1.7e19,_B0=2.07,_xi3=1.5e-4)
+	# loop over minority energetic particle energy
+	energies_MeV = np.array([i/100 for i in range(100,2025,25)])
+	# plasma parameters
+	B0 = 2.07 # T
+	n0 = 1.7e19 # 1/m^3
+	xi3 = 1.5e-4 #
+	n3 = xi3*n0 # 1/m^3
+	xi2 = 0.11
+	xi1 = (1/Z1)*(1-Z2*xi2-Z3*xi3)
+	v0 = np.sqrt(2*energies_MeV*1e6*qe/m3)# m/s
+	vperp_vA = 0.9
+	vA = B0/np.sqrt(mu0*n0*(m1*xi1+m2*xi2+m3*xi3))
+	vpara = (v0**2 - (vperp_vA*vA)**2)**0.5
+	pitchcosine = vpara/v0
+	print(energies_MeV,pitchcosine)
+	loop_generate(filename=name,_btext=btext,_Eminarr=energies_MeV,_pitcharr=pitchcosine)
 
 	# # thermal spread and percentage
 	# th_spread_beam = ' 0.01'   # with spacing before

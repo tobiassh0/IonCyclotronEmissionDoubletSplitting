@@ -115,6 +115,7 @@ addprocs(nprocsadded, exeflags="--project")
   ze = -1
 
   # mass and charge of ions
+
   # D-T-α
   # masses
   m1 = md*mₑ
@@ -124,15 +125,16 @@ addprocs(nprocsadded, exeflags="--project")
   z1 = 1
   z2 = 1
   zmin = 2
-  # D-He3-p
-  # masses
-#  m1 = md*mₑ
-#  m2 = mHe3*mₑ
-#  mmin = mp*mₑ
-#  # charge numbers
-#  z1 = 1
-#  z2 = 2
-#  zmin = 1
+
+  # # D-He3-p
+  # # masses
+  # m1 = md*mₑ
+  # m2 = mHe3*mₑ
+  # mmin = mp*mₑ
+  # # charge numbers
+  # z1 = 1
+  # z2 = 2
+  # zmin = 1
 
   # concentrations and densities
   # Fig 18 Cottrell 1993

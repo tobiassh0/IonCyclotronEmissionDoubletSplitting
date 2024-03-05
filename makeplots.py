@@ -6,6 +6,10 @@
     code to analyse EPOCH sims.
 """
 
+import numpy as np
+import matplotlib.pyplot as plt
+import h5py
+import pickle
 tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
 
 ## 
@@ -178,7 +182,7 @@ def make1D(xdata,ydata,maxnormx=None,norm=(1,1),bins=1000):
     return xarr, Z
 
 # plot the contour lines of integer multiples of the cyclotron frequency (not smooth)
-def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(None,None),bins=(1000,1000),ALPHA=0.5,levels=None):
+def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(None,None),bins=(1000,1000),alpha=0.5,levels=None,color='white'):
     if not levels:
         levels = range(0,maxnormf+1,1)
     # get frequency meshgrid as per FAW dispersion (Eq. 9 in DOI: 10.1088/1361-6587/ac8ba4)
@@ -191,8 +195,8 @@ def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(Non
             ((K2 + KPARA**2 + (K2*KPARA**2)*(VA**2)/(norm[0]**2))**2 - 4*K2*KPARA**2)**0.5)
     extents = np.array([collim[0],collim[1],rowlim[0],rowlim[1]])/norm[1]
 
-    ax.contour(np.sqrt(W2)/norm[0],levels=levels,origin='lower',colors='white',alpha=ALPHA,extent=extents)
-    ax.plot([0,maxnormf],[0,0],color='darkgrey',linestyle='--')
+    ax.contour(np.sqrt(W2)/norm[0],levels=levels,origin='lower',colors=color,alpha=alpha,extent=extents)
+    ax.plot([0,maxnormf],[0,0],color='darkgrey',linestyle='--',alpha=alpha)
     return fig, ax
 
 # plot kperp vs. kpara with growth rate heatmap 
@@ -215,7 +219,7 @@ def plot_k2d_growth(kpara,kperp,dw,w,norm=[None,None],cmap='summer',clims=(None,
     return None
 
 # plot kperp vs. kpara with growth rate heatmap for a range (loop) of concentrations
-def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
+def plot_k2d_growth_combined(solloc=[''],loop=[],cmap='summer',clims=(0,0.15)):
     fig = plt.figure(figsize=(10,10))
 
     # base (largest fig)
@@ -242,9 +246,8 @@ def plot_k2d_growth_combined(home='',loop=[],cmap='summer',clims=(0,0.15)):
     i=0
     for ax in fig.axes:
         print(loop[i])
-        solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(loop[i])
-        os.chdir(solloc)
-        data=read_all_data(loc=solloc)
+        os.chdir(solloc[i])
+        data=read_all_data(loc=solloc[i])
         w0,k0,w,dw,kpara,kperp = data
         norm = [w0,k0]
         try:
@@ -416,7 +419,7 @@ def make_all_plots(alldata=None,maxnormfreq=15,maxnormkperp=15,cmap='summer'):
     return None
 
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
-def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
+def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
     plot_2D=kwargs.get('plot_2D')
     plot_3D=kwargs.get('plot_3D')
     plot_hm=kwargs.get('plot_hm')
@@ -443,9 +446,8 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
     # loop over concentrations
     for i in range(len(loop)):
         print(loop[i])
-        solloc = home+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(loop[i])
-        os.chdir(solloc)
-        data=read_all_data(loc=solloc)
+        os.chdir(solloc[i])
+        data=read_all_data(loc=solloc[i])
 
         w0,k0,w,dw,kpara,kperp = data
         xarr, zarr = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
@@ -510,15 +512,11 @@ def get_peak_freqs(loop=[],home='',maxnormf=18,fbins=800,**kwargs):
 if __name__ == '__main__':
     ## PACKAGES ## 
     # standard
-    import numpy as np
-    import matplotlib.pyplot as plt
     from matplotlib import cm
     from matplotlib.gridspec import GridSpec
     plt.style.use('classic')
     plt.tight_layout()
     plt.rcParams['axes.formatter.useoffset'] = False
-    import pickle
-    import h5py
     from scipy import stats, signal
     # parallelising
     import multiprocessing as mp
@@ -529,13 +527,37 @@ if __name__ == '__main__':
     ## BODY ## 
     homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/"
     homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
+    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/"
 
     ## one file
     # data=read_all_data(loc=LOC_FILE)
     # make_all_plots(alldata=data)
     XI2 = [i/200 for i in range(0,200,5)]
     print(XI2)
-        
+    os.chdir(homeloc)
+    runs = np.sort([i for i in os.listdir() if 'run' in i])
+    nearr=[]
+    names=[]
+    # separate to find parameters
+    for run in runs:
+        params = run.split("_")
+        # if name not given, this will return ValueError
+        _, B0, xiT, pitch, vthperp, vthpara, kperpmax, EminMeV, name, tempkeV, kparamax, ne, ximin, ngridpoints = params
+        nearr.append(ne)
+        names.append(name)
+    # sort names & nearr (sort by increasing name (xi2))
+    nearr = [x for _,x in sorted(zip(names,nearr))]
+    names = np.sort(names)
+    sollocs = [homeloc+'run_2.07_0.0_-0.646_0.01_0.01_15.0_3.5_{}_1.0_4.0_{}_0.00015_1024/'.format(names[i],nearr[i]) for i in range(len(names))]
+    # sollocs = ['/home/space/phrmsf/Documents/ICE_DS/run_3.7_0.25_0.989212_0.01_0.01_15.0_14.68_D_HE3_2.0_4.0_5.0e19_1.0e-5_1024/']
+    for i in range(len(runs)):
+        print(sollocs[i])
+        os.chdir(sollocs[i])
+        data=read_all_data(loc=sollocs[i])
+        w0,k0,w,dw,kpara,kperp = data
+        make_all_plots(alldata=data)
+    sys.exit()
+
     # for xi2 in XI2:
     #     print(xi2)
     #     # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
@@ -549,19 +571,20 @@ if __name__ == '__main__':
 
     #     # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
     #     # cbar = plt.colorbar(im)
-    #     # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),ALPHA=1)
+    #     # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),alpha=1)
     #     # for i in range(15):
     #     #    ax.axvline(i,linestyle='--',color='k')
     #     # plt.show()
  
     # multiple files
-    get_peak_freqs(loop=XI2,home=homeloc,plot_2D=True)
-    sys.exit()
-    XI2 = [i/100 for i in range(45,95,5)]
-    XI2.append(0)
-    XI2 = np.sort(XI2)
-    print(XI2)
-    plot_k2d_growth_combined(home=homeloc,loop=XI2)
+    # XI2 = [i/100 for i in range(45,95,5)]
+    # XI2.append(0)
+    # XI2 = np.sort(XI2)
+    # print(XI2)
+    # sollocs = [homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(i) for i in XI2]
+    # get_peak_freqs(solloc=sollocs,loop=XI2,plot_2D=True)
+    # plot_k2d_growth_combined(solloc=sollocs,loop=XI2)
+
 
 """
     TODO ; 
