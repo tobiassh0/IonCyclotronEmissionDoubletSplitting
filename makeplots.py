@@ -72,9 +72,9 @@ def jld_to_pkl(loc='',frac=1,parallel=False):
     f = h5py.File(loc+'solutions2D_.jld',"r")
     keys=f.keys()
     # for k in keys: print(k)
-    w0 = f["w0"][()]
-    k0 = f["k0"][()]
-    sols = f["plasmasols"][()]
+    w0 = f['w0'][()]
+    k0 = f['k0'][()]
+    sols = f['plasmasols'][()]
     solshape = sols.shape[0] ; print(solshape)
     w = np.zeros(int(solshape/frac+1)) ; dw = np.zeros(int(solshape/frac+1))
     kpara = np.zeros(int(solshape/frac+1)) ; kperp = np.zeros(int(solshape/frac+1))
@@ -93,11 +93,11 @@ def jld_to_pkl(loc='',frac=1,parallel=False):
             w[i],dw[i] = f[item][()][0]
             kpara[i],kperp[i] = f[item][()][1]
     # dumpfiles
-    dumpfiles(w,'frequency')
-    dumpfiles(dw,'growthrates')
-    dumpfiles(kpara,'parallelwavenumber')
-    dumpfiles(kperp,'perpendicularwavenumber')
-    dumpfiles([w0,k0],'w0k0')    
+    dumpfiles(w,loc+'frequency')
+    dumpfiles(dw,loc+'growthrates')
+    dumpfiles(kpara,loc+'parallelwavenumber')
+    dumpfiles(kperp,loc+'perpendicularwavenumber')
+    dumpfiles([w0,k0],loc+'w0k0')
     return w0,k0,w,dw,kpara,kperp
 
 # try reading data, otherwise convert to pkl
@@ -114,7 +114,7 @@ def read_all_data(loc=''):
     return data
 
 # make 1 array, defined by shape nx,ny or binx,biny, into (smaller) 2d array
-def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,None),limits=False,dump=False,name=''):
+def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(1000,1000),limits=False,dump=False,name=''):
     if rowval.shape != colval.shape and rowval.shape != val.shape: # make sure same shape
             raise SystemError
     if rowlim[0] != None or collim[0] != None: # check if limits applied
@@ -126,10 +126,11 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(None,No
         colmin, colmax = [np.min(colval),np.max(colval)]
     # if dumping, then expect to load a file, otherwise calculate
     try:
-        if dump:
+        if not dump:
             Z = read_pkl(name)
             [colmin,colmax,rowmin,rowmax] = read_pkl(name+'_ext')
         else:
+            read=False
             raise SystemError
     except: # can't load data
         if bins[0] == None: # no bins
@@ -182,7 +183,8 @@ def make1D(xdata,ydata,maxnormx=None,norm=(1,1),bins=1000):
     return xarr, Z
 
 # plot the contour lines of integer multiples of the cyclotron frequency (not smooth)
-def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(None,None),bins=(1000,1000),alpha=0.5,levels=None,color='white'):
+def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(None,None),bins=(1000,1000),alpha=0.5,\
+                    levels=None,color='white'):
     if not levels:
         levels = range(0,maxnormf+1,1)
     # get frequency meshgrid as per FAW dispersion (Eq. 9 in DOI: 10.1088/1361-6587/ac8ba4)
@@ -200,9 +202,10 @@ def plotCycContours(fig,ax,norm=[1,1],maxnormf=18,rowlim=(None,None),collim=(Non
     return fig, ax
 
 # plot kperp vs. kpara with growth rate heatmap 
-def plot_k2d_growth(kpara,kperp,dw,w,norm=[None,None],cmap='summer',clims=(None,None),labels=['',''],contours=False,dump=True):
+def plot_k2d_growth(kpara,kperp,dw,w,norm=[None,None],cmap='summer',clims=(None,None),labels=['',''],contours=False,dump=True,\
+                    rowlim=(-4,4),collim=(0,15),maxnormf=15):
     # make 2d matrix
-    Z,extents=make2D(kpara,kperp,dw,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),\
+    Z,extents=make2D(kpara,kperp,dw,rowlim=np.array(rowlim)*norm[1],collim=np.array(collim)*norm[1],\
                      bins=(1000,1000),limits=True,dump=dump,name='k2d_growth') # y, x, val
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
@@ -212,7 +215,7 @@ def plot_k2d_growth(kpara,kperp,dw,w,norm=[None,None],cmap='summer',clims=(None,
     ax.set_xlabel(labels[0],**tnrfont)
     ax.set_ylabel(labels[1],**tnrfont)
     if contours:
-        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),maxnormf=15)
+        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=np.array(rowlim)*norm[1],collim=np.array(collim)*norm[1],maxnormf=maxnormf)
     fig.savefig('kperp_kpara_growthrates.pdf',bbox_inches='tight')
     del Z
     print('plotted k2d')
@@ -403,21 +406,6 @@ def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angle
         print('plotted freq growth ang {:.1f}'.format(ang*180/np.pi))
     return None
 
-# reproduce main plots of the JWS.Cook LMV Julia code
-def make_all_plots(alldata=None,maxnormfreq=15,maxnormkperp=15,cmap='summer'):
-    w0,k0,w,dw,kpara,kperp = alldata
-    # labels
-    l1 = "Perpendicular Wavenumber"+ "  "+r"$[\Omega_i/V_A]$"   # r'$k_\perp v_A/\Omega_i$'
-    l2 = "Parallel Wavenumber"+ "  "+r"$[\Omega_i/V_A]$"        # r'$k_\parallel v_A/\Omega_i$'
-    l3 = "Frequency"+ "  "+r"$[\Omega_i]$"                      # r'$\omega/\Omega_i$'
-    l4 = "Growth Rate"+ "  "+r"$[\Omega_i]$"                    # r'$\gamma/\Omega_i$'
-    plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False)
-    plot_frq_growth(w,dw,kpara,maxnormf=maxnormfreq,norm=[w0,k0],labels=[l3,l4])
-    plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],angles=[88.,88.5,89.,89.5,90.],labels=[l3,l4],clims=[0,0.5])
-    plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
-    plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
-    return None
-
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
 def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
     plot_2D=kwargs.get('plot_2D')
@@ -507,6 +495,36 @@ def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
         plt.show()
     return None
 
+# reproduce main plots of the JWS.Cook LMV Julia code
+def make_all_plots(alldata=None,cmap='summer'):
+    w0,k0,w,dw,kpara,kperp = alldata
+    maxnormfreq = np.max(w)/w0
+    maxnormkperp = np.max(kperp)/k0
+    maxnormkpara = np.max(kpara)/k0
+    # labels
+    l1 = "Perpendicular Wavenumber"+ "  "+r"$[\Omega_i/V_A]$"   # r'$k_\perp v_A/\Omega_i$'
+    l2 = "Parallel Wavenumber"+ "  "+r"$[\Omega_i/V_A]$"        # r'$k_\parallel v_A/\Omega_i$'
+    l3 = "Frequency"+ "  "+r"$[\Omega_i]$"                      # r'$\omega/\Omega_i$'
+    l4 = "Growth Rate"+ "  "+r"$[\Omega_i]$"                    # r'$\gamma/\Omega_i$'
+    # plotting scripts
+    plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False,\
+                    rowlim=(-maxnormkpara,maxnormkpara),collim=(0,maxnormkperp),maxnormf=maxnormkperp,dump=False)
+    plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,norm=[w0,k0],labels=[l3,l4])
+    plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=maxnormkperp,norm=[w0,k0],angles=[88.,88.5,89.,89.5,90.],labels=[l3,l4],clims=[0,0.5])
+    plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
+    plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
+    return None
+
+# parallel transferral of multiple runs data from HDF5 to pkl
+def para_runs(loc):
+    data=read_all_data(loc=loc)
+    return None
+
+# return list of sorted run solution files in home directory (defaults to cwd)
+def getsollocs(home=''):
+    if home == '': home = os.getcwd()
+    sollocs = [home+i+'/' for i in os.listdir(home) if 'run' in i]
+    return np.sort(sollocs)
 
 #-#-#
 if __name__ == '__main__':
@@ -525,56 +543,51 @@ if __name__ == '__main__':
     import os,sys
 
     ## BODY ## 
-    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/"
-    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/"
-    homeloc = "/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/"
-
-    ## one file
-    # data=read_all_data(loc=LOC_FILE)
-    # make_all_plots(alldata=data)
     XI2 = [i/200 for i in range(0,200,5)]
     print(XI2)
-    os.chdir(homeloc)
-    runs = np.sort([i for i in os.listdir() if 'run' in i])
-    nearr=[]
-    names=[]
-    # separate to find parameters
-    for run in runs:
-        params = run.split("_")
-        # if name not given, this will return ValueError
-        _, B0, xiT, pitch, vthperp, vthpara, kperpmax, EminMeV, name, tempkeV, kparamax, ne, ximin, ngridpoints = params
-        nearr.append(ne)
-        names.append(name)
-    # sort names & nearr (sort by increasing name (xi2))
-    nearr = [x for _,x in sorted(zip(names,nearr))]
-    names = np.sort(names)
-    sollocs = [homeloc+'run_2.07_0.0_-0.646_0.01_0.01_15.0_3.5_{}_1.0_4.0_{}_0.00015_1024/'.format(names[i],nearr[i]) for i in range(len(names))]
-    # sollocs = ['/home/space/phrmsf/Documents/ICE_DS/run_3.7_0.25_0.989212_0.01_0.01_15.0_14.68_D_HE3_2.0_4.0_5.0e19_1.0e-5_1024/']
-    for i in range(len(runs)):
-        print(sollocs[i])
-        os.chdir(sollocs[i])
-        data=read_all_data(loc=sollocs[i])
-        w0,k0,w,dw,kpara,kperp = data
-        make_all_plots(alldata=data)
-    sys.exit()
+    homes = {
+        'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/",
+        'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/",
+        'lowkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/",
+        'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
+    }
 
-    # for xi2 in XI2:
-    #     print(xi2)
-    #     # solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(xi2)
-    #     solloc = homeloc+"run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/".format(xi2)
-    #     os.chdir(solloc)
-    #     data=read_all_data(loc=solloc)
+    homeloc = homes.get('highkperp_T')
+    sollocs = getsollocs(homeloc)
+
+    # pure D
+    # homeloc = homes.get('highkperp_noT')
+    # runs = getsollocs(homeloc)
+    # nearr=[]
+    # names=[]
+    # # separate to find parameters
+    # for run in runs:
+    #    params = run.split("_")
+    #    # if name not given, this will return ValueError
+    #    _, B0, xiT, pitch, vthperp, vthpara, kperpmax, EminMeV, name, tempkeV, kparamax, ne, ximin, ngridpoints = params
+    #    nearr.append(ne)
+    #    names.append(name)
+    # # sort names & nearr (sort by increasing name (xi2))
+    # nearr = [x for _,x in sorted(zip(names,nearr))]
+    # names = np.sort(names)
+    # sollocs = np.array([homeloc+'run_2.07_0.0_-0.646_0.01_0.01_25.0_3.5_{}_1.0_4.0_{}_0.00015_2048/'.format(names[i],nearr[i]) for i in range(len(names))])
+
+    # # one file
+    # data=read_all_data(loc=LOC_FILE)
+    # make_all_plots(alldata=data)
+
+    # # multiple files
+    # pool = mp.Pool(2**(round(np.log2(mp.cpu_count()))-1))
+    # pool.map(para_runs,sollocs).get(99999)
+    # pool.close()
+
+    # for i in range(len(sollocs)):
+    #     print(sollocs[i])
+    #     os.chdir(sollocs[i])
+    #     data=read_all_data(loc=sollocs[i])
     #     w0,k0,w,dw,kpara,kperp = data
     #     make_all_plots(alldata=data)
-    #     # fig, ax = plt.subplots(figsize=(8,6))
-    #     # Z,extents = make2D(kpara,kperp,w,rowlim=(-4*k0,4*k0),collim=(0,15*k0),dump=True,name='freq_k2d',limits=True,bins=(800,800))
-
-    #     # im = ax.imshow(Z/w0,aspect='auto',origin='lower',extent=np.array(extents)/k0,cmap=plt.cm.get_cmap('jet',15),vmin=0,vmax=15)
-    #     # cbar = plt.colorbar(im)
-    #     # fig,ax=plotCycContours(fig,ax,norm=[w0,k0],maxnormf=15,rowlim=(-4*k0,4*k0),collim=(0,15*k0),alpha=1)
-    #     # for i in range(15):
-    #     #    ax.axvline(i,linestyle='--',color='k')
-    #     # plt.show()
+    # sys.exit()
  
     # multiple files
     # XI2 = [i/100 for i in range(45,95,5)]
@@ -582,8 +595,12 @@ if __name__ == '__main__':
     # XI2 = np.sort(XI2)
     # print(XI2)
     # sollocs = [homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(i) for i in XI2]
-    # get_peak_freqs(solloc=sollocs,loop=XI2,plot_2D=True)
-    # plot_k2d_growth_combined(solloc=sollocs,loop=XI2)
+
+    homelocs = [homes.get('highkperp_T'),homes.get('highkperp_noT')]
+    for home in homelocs:
+        sollocs = getsollocs(home)
+        get_peak_freqs(solloc=sollocs,loop=XI2,plot_2D=True,maxnormf=25)
+        # plot_k2d_growth_combined(solloc=sollocs,loop=XI2)
 
 
 """
