@@ -222,14 +222,17 @@ def plot_k2d_growth(kpara,kperp,dw,w,norm=[None,None],cmap='summer',clims=(None,
     return None
 
 # plot kperp vs. kpara with growth rate heatmap for a range (loop) of concentrations
-def plot_k2d_growth_combined(solloc=[''],loop=[],cmap='summer',clims=(0,0.15)):
-    fig = plt.figure(figsize=(10,10))
+def plot_k2d_growth_combined(sollocs=[''],loop=[],cmap='summer',clims=(0,0.15),rowlim=(-4,4),collim=(0,15)):
+    rowlim = np.array(rowlim)
+    collim = np.array(collim)
 
+    fig = plt.figure(figsize=(10,10))
+    
     # base (largest fig)
-    gs1 = GridSpec(4, 10, bottom=0.53, top=0.98, left=0.05, right=0.95, wspace=0.0, hspace=0.075)# bottom spacing creates space for gs2 
+    gs1 = GridSpec(4, 10, bottom=0.53, top=0.98, left=0.1, right=0.95, wspace=0.0, hspace=0.05)# bottom spacing creates space for gs2 
     ax1 = fig.add_subplot(gs1[:, :])                                # 0
     # loop (zoomed figs)
-    gs2 = GridSpec(8, 10, bottom=0.05, top=0.49, left=0.05, right=0.95, wspace=0.15, hspace=0.15) # nrows, ncols, l, r, wsp, hsp
+    gs2 = GridSpec(8, 10, bottom=0.075, top=0.49, left=0.1, right=0.95, wspace=0.15, hspace=0.35) # nrows, ncols, l, r, wsp, hsp
     ax11 = fig.add_subplot(gs2[:4, :2])                             # 1
     ax12 = fig.add_subplot(gs2[:4, 2:4],sharey=ax11)                # 2
     ax13 = fig.add_subplot(gs2[:4, 4:6],sharey=ax11)                # 3
@@ -249,21 +252,21 @@ def plot_k2d_growth_combined(solloc=[''],loop=[],cmap='summer',clims=(0,0.15)):
     i=0
     for ax in fig.axes:
         print(loop[i])
-        os.chdir(solloc[i])
-        data=read_all_data(loc=solloc[i])
+        os.chdir(sollocs[i])
+        data=read_all_data(loc=sollocs[i])
         w0,k0,w,dw,kpara,kperp = data
         norm = [w0,k0]
         try:
             Z = read_pkl('k2d_growth')
             extents = read_pkl('k2d_growth_ext')
         except:
-            Z,extents=make2D(kpara,kperp,dw,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),\
+            Z,extents=make2D(kpara,kperp,dw,rowlim=rowlim*norm[1],collim=collim*norm[1],\
                                 bins=(1000,1000),limits=True,dump=True,name='k2d_growth') # y, x, val
         im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
         if i==0:
-            fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]))
+            fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],maxnormf=collim[-1])
         else:
-            fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=(-4*norm[1],4*norm[1]),collim=(0,15*norm[1]),levels=[12,13,14,15])        
+            fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=[12,13,14,15])        
         # ax.plot([0,15],[-1,1])
         ax.annotate("{:.2f}".format(loop[i]), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
         i+=1
@@ -296,8 +299,8 @@ def plot_k2d_growth_combined(solloc=[''],loop=[],cmap='summer',clims=(0,0.15)):
             allax[i].set_xlim(11,15)
             allax[i].set_ylim(-1,1)
         else:
-            allax[i].set_xlim(0,15)
-            allax[i].set_ylim(-4,4)
+            allax[i].set_xlim(collim)
+            allax[i].set_ylim(rowlim)
 
     # ax_group = fig.add_subplot(gs2[-1, 0:10])
     # ax_group.set_xticks([])
@@ -307,13 +310,16 @@ def plot_k2d_growth_combined(solloc=[''],loop=[],cmap='summer',clims=(0,0.15)):
 
     # colorbar
     p0 = ax1.get_position().get_points().flatten()
+    p1 = allax[-1].get_position().get_points().flatten()
     # im = ax1.imshow([[0,1],[0,1]],aspect='auto',origin='lower')
-    cbar = fig.add_axes([p0[2]+0.02, 0.05, 0.01, p0[3]-0.05]) # [left bottom width height]
+    cbar = fig.add_axes([p0[2]+0.02, p1[1], 0.01, p0[3]-p1[1]]) # [left bottom width height]
                       # [0.97,0.05,0.01,0.93]
     plt.colorbar(im, cax=cbar, orientation='vertical')
     cbar.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
-    # plt.show()
+    fig.supylabel('Parallel Wavenumber '+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
+    fig.supxlabel('Perpendicular Wavenumber '+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
     fig.savefig('../kperp_kpara_growthrates_combined.pdf',bbox_inches='tight')
+    # plt.show()
 
     return None
 
@@ -376,7 +382,8 @@ def plot_frq_growth(w,dw,kpara,maxnormf=None,norm=[None,None],clims=(-1.5,1.5),l
     return None
 
 # plot freq vs. growth for a given (range of) angle(s)
-def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angles=[88.,88.5,89.,89.5],labels=['',''],clims=[0,0.5]):
+def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angles=[88.,88.5,89.,89.5],labels=['',''],clims=[0,0.5],\
+                            percentage=0.0025):
     thresh = (w < maxnormf*norm[0]) & (dw > 0) # less than maxnormf & growth rates greater than 0
     kpara = kpara[thresh] ; w = w[thresh] ; dw = dw[thresh]
     for ang in angles: # TODO; dont have to loop over angles, could loop over once and assign growths based on array of angles given
@@ -387,7 +394,7 @@ def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angle
         fig,ax=plt.subplots(figsize=(8,6))
         ang *= np.pi/180 # radians
         for k in range(len(kpara)): # provide error bars between as grid is not 100% accurate to angles
-            if np.arctan(kperp[k]/kpara[k]) < ang*1.0025 and np.arctan(kperp[k]/kpara[k]) > ang*0.9975:
+            if np.arctan(kperp[k]/kpara[k]) < ang*(1+percentage) and np.arctan(kperp[k]/kpara[k]) > ang*(1-percentage):
                 tkpara[k] = kpara[k]
                 tw[k] = w[k]
                 tdw[k] = dw[k]
@@ -400,14 +407,15 @@ def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angle
         ax.set_ylim(0,0.15)
         sw, sdw = make1D(tw,tdw,norm=(norm[0],norm[0]),maxnormx=maxnormf,bins=200) # very small No. bins
         ax.plot(sw/norm[0],sdw/norm[0],color='k')
-        ax.annotate("{:.1f}".format(ang*180/np.pi), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
+        ax.annotate(r"${:.2f}\pm{:.2f}$".format(ang*180/np.pi,ang*percentage*180/np.pi), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
         fig.savefig('freq_growth_{:.1f}.png'.format(ang*180/np.pi),bbox_inches='tight')
-        fig.clf()
+        # plt.show()
+        plt.clf()
         print('plotted freq growth ang {:.1f}'.format(ang*180/np.pi))
     return None
 
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
-def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
+def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
     plot_2D=kwargs.get('plot_2D')
     plot_3D=kwargs.get('plot_3D')
     plot_hm=kwargs.get('plot_hm')
@@ -436,7 +444,6 @@ def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
         print(loop[i])
         os.chdir(solloc[i])
         data=read_all_data(loc=solloc[i])
-
         w0,k0,w,dw,kpara,kperp = data
         xarr, zarr = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
         # 2D plot
@@ -485,6 +492,7 @@ def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
         for i in range(0,maxnormf+1,1):
             axhm.axvline(i,color='darkgrey',linestyle='--')
         im = axhm.imshow(growth_hm,origin='lower',aspect='auto',extent=[0,maxnormf,0,1],cmap='summer',interpolation='none',clim=(0,0.15))
+        # cbar = fig.colorbar(im, orientation='vertical', pad=0.1)
         cbar=plt.colorbar(im)
         cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         # for i in range(len(x)):
@@ -492,7 +500,8 @@ def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=800,**kwargs):
         axhm.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         axhm.set_ylabel(r'$\xi_T$',**tnrfont)
         fighm.savefig('../freq_xiT_growth_all.png',bbox_inches='tight')
-        plt.show()
+        # plt.show()
+    plt.clf()
     return None
 
 # reproduce main plots of the JWS.Cook LMV Julia code
@@ -507,12 +516,13 @@ def make_all_plots(alldata=None,cmap='summer'):
     l3 = "Frequency"+ "  "+r"$[\Omega_i]$"                      # r'$\omega/\Omega_i$'
     l4 = "Growth Rate"+ "  "+r"$[\Omega_i]$"                    # r'$\gamma/\Omega_i$'
     # plotting scripts
-    plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False,\
-                    rowlim=(-maxnormkpara,maxnormkpara),collim=(0,maxnormkperp),maxnormf=maxnormkperp,dump=False)
-    plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,norm=[w0,k0],labels=[l3,l4])
-    plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=maxnormkperp,norm=[w0,k0],angles=[88.,88.5,89.,89.5,90.],labels=[l3,l4],clims=[0,0.5])
-    plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
-    plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
+    # plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False,\
+    #                 rowlim=(-maxnormkpara,maxnormkpara),collim=(0,maxnormkperp),maxnormf=maxnormkperp,dump=False) # load
+    # plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,norm=[w0,k0],labels=[l3,l4])
+    plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=maxnormkperp,norm=[w0,k0],angles=[88.,88.5,89.,89.5,90.],labels=[l3,l4],\
+                    clims=[0,0.5],percentage=0.0005)
+    # plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
+    # plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
 
 # parallel transferral of multiple runs data from HDF5 to pkl
@@ -552,12 +562,18 @@ if __name__ == '__main__':
         'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
     }
 
-    homeloc = homes.get('highkperp_T')
-    sollocs = getsollocs(homeloc)
+    # # DT runs
+    # homeloc = homes.get('highkperp_T')
+    # XI2 = [i/100 for i in range(45,95,5)]
+    # XI2.append(0)
+    # XI2 = np.sort(XI2)
+    # sollocs = getsollocs(homeloc)
+    # sollocs = [homeloc+'/run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
 
-    # pure D
+    # D runs
     # homeloc = homes.get('highkperp_noT')
-    # runs = getsollocs(homeloc)
+    # runs = getsolloc(homeloc)
     # nearr=[]
     # names=[]
     # # separate to find parameters
@@ -580,7 +596,6 @@ if __name__ == '__main__':
     # pool = mp.Pool(2**(round(np.log2(mp.cpu_count()))-1))
     # pool.map(para_runs,sollocs).get(99999)
     # pool.close()
-
     # for i in range(len(sollocs)):
     #     print(sollocs[i])
     #     os.chdir(sollocs[i])
@@ -589,18 +604,15 @@ if __name__ == '__main__':
     #     make_all_plots(alldata=data)
     # sys.exit()
  
-    # multiple files
-    # XI2 = [i/100 for i in range(45,95,5)]
-    # XI2.append(0)
-    # XI2 = np.sort(XI2)
-    # print(XI2)
-    # sollocs = [homeloc+"run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/".format(i) for i in XI2]
-
+    # # multiple files
+    XI2 = [i/100 for i in range(45,95,5)]
+    XI2.append(0)
+    XI2 = np.sort(XI2)
     homelocs = [homes.get('highkperp_T'),homes.get('highkperp_noT')]
     for home in homelocs:
         sollocs = getsollocs(home)
-        get_peak_freqs(solloc=sollocs,loop=XI2,plot_2D=True,maxnormf=25)
-        # plot_k2d_growth_combined(solloc=sollocs,loop=XI2)
+        get_peak_freqs(solloc=sollocs,loop=XI2,maxnormf=25,plot_2D=True) # plot_hm, plot_2D, plot_3D
+        # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2)
 
 
 """

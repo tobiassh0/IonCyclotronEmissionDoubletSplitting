@@ -14,14 +14,15 @@ if __name__=='__main__':
     # create array of k for given angle
 
     angles = np.linspace(85*np.pi/180,np.pi/2,11)
-    fig, axs = plt.subplots(nrows=6,ncols=2,sharex=True,sharey=True)
+    fig, axs = plt.subplots(figsize=(15,5),nrows=2,ncols=6,sharex=True,sharey=True)
+    fig.subplots_adjust(hspace=0.1,wspace=0.075)
     ax=axs.ravel()
     j=0
     for ang in angles:
         try:
             DW = read_pkl(loc+'DW_{}'.format(ang))
             k = read_pkl(loc+'kang_{}'.format(ang))    
-            tw = read_pkl(loc+'wang1_{}'.format(ang))
+            tw = read_pkl(loc+'wang_{}'.format(ang))
             extents = read_pkl(loc+'extang_{}'.format(ang))
         except:
             k = np.zeros(len(kpara))
@@ -49,7 +50,9 @@ if __name__=='__main__':
         KPARA = np.sqrt(K2)*np.cos(ang)
         wFAW = np.sqrt(((VA**2)/2)*(K2 + KPARA**2 + (K2*KPARA**2)*((VA**2)/(w0**2)) + \
                 ((K2 + KPARA**2 + (K2*KPARA**2)*(VA**2)/(w0**2))**2 - 4*K2*KPARA**2)**0.5))
-        ax[j].plot(np.sqrt(K2)/k0,wFAW/w0,color='w',linestyle='--',alpha=0.5)
+        ax[j].plot(np.sqrt(K2)/k0,wFAW/w0,color='w',linestyle=':',alpha=0.5)
+        # vA line
+        ax[j].plot([0,15],[0,15],color='w',alpha=0.5,linestyle='--')
 
         # # plot harmonics
         # for i in range(0,16):
@@ -59,10 +62,22 @@ if __name__=='__main__':
         # plot heatmap
         print(k.shape,tw.shape)
         print(np.max(w)/w0,np.max(k)/k0)
-        ax[j].imshow((np.abs(DW)/w0),cmap='jet',aspect='auto',origin='lower',extent=[extents[0]/k0,extents[1]/k0,extents[2]/w0,extents[3]/w0])#[0,np.max(k)/k0,0,np.max(w)/w0])
+        floor = 0 #1e-8 # non-zero for when taking the log
+        DW = DW + floor
+        im = ax[j].imshow(((DW)/w0),cmap='jet',aspect='auto',origin='lower',extent=[extents[0]/k0,extents[1]/k0,extents[2]/w0,extents[3]/w0],clim=(1e-3,1e-1))#[0,np.max(k)/k0,0,np.max(w)/w0])
         ax[j].set_xlim(0,15) # k limit
         ax[j].set_ylim(0,15) # freq limit
-        ax[j].annotate(ang*180/np.pi,xy=(0.1,0.75),xycoords='axes fraction',color='w')
+        ax[j].annotate("{:.1f}".format(ang*180/np.pi),xy=(0.1,0.75),xycoords='axes fraction',color='w')
         j+=1
+
+    # colorbar     
+    p0 = ax[0].get_position().get_points().flatten()
+    p1 = ax[-1].get_position().get_points().flatten()
+    cbar = fig.add_axes([p0[0], p0[3]+0.07, p1[0], 0.02]) # [left bottom width height]
+    plt.colorbar(im, cax=cbar, orientation='horizontal',ticks=np.linspace(1e-3,1e-1,5))#,labels=[1e-3,1e-1])
+
+    fig.supylabel('Frequency' + '  ' + r'$[\Omega_i]$',**tnrfont)
+    fig.supxlabel('Wavenumber' + '  ' + r'$[\Omega_i/V_A]$',**tnrfont)
     plt.show()
+    fig.savefig('FT2d_equivalent.png',bbox_inches='tight')
 
