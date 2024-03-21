@@ -617,7 +617,7 @@ if __name__ == '__main__':
 
 """
     TODO ; 
-        - (efficiency) list of angles given to plot angle loop, dont loop over 3.8e6 len arrays each time
-            - could make number of empty arrays based on len(angles) and loop over kperp/kpara once to see if
-                angle in angle list
+        - (efficiency) list of angles given to plot angle loop, dont loop over N len arrays each time
+            - could make number of empty arrays based on len(angles) and loop over kperp/kpara once and see if
+                angle in list of angles
 """
