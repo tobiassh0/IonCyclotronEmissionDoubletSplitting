@@ -6,12 +6,25 @@
     code to analyse EPOCH sims.
 """
 
+## PACKAGES ## 
+# standard
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 import pickle
-tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
+from matplotlib import cm
+from matplotlib.gridspec import GridSpec
+plt.style.use('classic')
+plt.tight_layout()
+plt.rcParams['axes.formatter.useoffset'] = False
+from scipy import stats, signal
+# parallelising
+import multiprocessing as mp
+from functools import partial
+# other
+import os,sys
 
+tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
 ## 
 
 ## Dump pkl files
@@ -164,7 +177,7 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(1000,10
         return Z
 
 # make 2 arrays of nx,ny length into shorter binned arrays 
-def make1D(xdata,ydata,maxnormx=None,norm=(1,1),bins=1000):
+def make1D(xdata,ydata,maxnormx=15,norm=(1,1),bins=800):
     normx, normy = norm
     if not maxnormx:
         maxnormx = np.max(xdata)
@@ -538,19 +551,6 @@ def getsollocs(home=''):
 
 #-#-#
 if __name__ == '__main__':
-    ## PACKAGES ## 
-    # standard
-    from matplotlib import cm
-    from matplotlib.gridspec import GridSpec
-    plt.style.use('classic')
-    plt.tight_layout()
-    plt.rcParams['axes.formatter.useoffset'] = False
-    from scipy import stats, signal
-    # parallelising
-    import multiprocessing as mp
-    from functools import partial
-    # other
-    import os,sys
 
     ## BODY ## 
     XI2 = [i/200 for i in range(0,200,5)]
@@ -592,27 +592,21 @@ if __name__ == '__main__':
     # data=read_all_data(loc=LOC_FILE)
     # make_all_plots(alldata=data)
 
-    # # multiple files
-    # pool = mp.Pool(2**(round(np.log2(mp.cpu_count()))-1))
-    # pool.map(para_runs,sollocs).get(99999)
-    # pool.close()
-    # for i in range(len(sollocs)):
-    #     print(sollocs[i])
-    #     os.chdir(sollocs[i])
-    #     data=read_all_data(loc=sollocs[i])
-    #     w0,k0,w,dw,kpara,kperp = data
-    #     make_all_plots(alldata=data)
-    # sys.exit()
- 
-    # # multiple files
-    XI2 = [i/100 for i in range(45,95,5)]
-    XI2.append(0)
-    XI2 = np.sort(XI2)
-    homelocs = [homes.get('highkperp_T'),homes.get('highkperp_noT')]
-    for home in homelocs:
-        sollocs = getsollocs(home)
-        get_peak_freqs(solloc=sollocs,loop=XI2,maxnormf=25,plot_2D=True) # plot_hm, plot_2D, plot_3D
-        # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2)
+    # multiple files
+    homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/D_T_energy_scan/'
+    # get sollocs
+    sollocs = getsollocs(homeloc)
+
+    pool = mp.Pool(2**(round(np.log2(mp.cpu_count()))-1)) # find nearest multiple of 2
+    pool.map(para_runs,sollocs).get(99999)
+    pool.close()
+    for i in range(len(sollocs)):
+        print(sollocs[i])
+        os.chdir(sollocs[i])
+        data=read_all_data(loc=sollocs[i])
+        w0,k0,w,dw,kpara,kperp = data
+        make_all_plots(alldata=data)
+    sys.exit()
 
 
 """
