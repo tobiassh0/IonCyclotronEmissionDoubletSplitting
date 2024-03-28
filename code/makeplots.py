@@ -396,7 +396,7 @@ def plot_frq_growth(w,dw,kpara,maxnormf=None,norm=[None,None],clims=(-1.5,1.5),l
 
 # plot freq vs. growth for a given (range of) angle(s)
 def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angles=[88.,88.5,89.,89.5],labels=['',''],clims=[0,0.5],\
-                            percentage=0.0025):
+                            percentage=0.0025,smooth=True):
     thresh = (w < maxnormf*norm[0]) & (dw > 0) # less than maxnormf & growth rates greater than 0
     kpara = kpara[thresh] ; w = w[thresh] ; dw = dw[thresh]
     for ang in angles: # TODO; dont have to loop over angles, could loop over once and assign growths based on array of angles given
@@ -418,8 +418,9 @@ def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angle
         ax.set_ylabel(labels[1],**tnrfont)
         ax.set_xlim(0,maxnormf)
         ax.set_ylim(0,0.15)
-        sw, sdw = make1D(tw,tdw,norm=(norm[0],norm[0]),maxnormx=maxnormf,bins=200) # very small No. bins
-        ax.plot(sw/norm[0],sdw/norm[0],color='k')
+        if smooth:
+            sw, sdw = make1D(tw,tdw,norm=(norm[0],norm[0]),maxnormx=maxnormf,bins=200) # very small No. bins
+            ax.plot(sw/norm[0],sdw/norm[0],color='k')
         ax.annotate(r"${:.2f}\pm{:.2f}$".format(ang*180/np.pi,ang*percentage*180/np.pi), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
         fig.savefig('freq_growth_{:.1f}.png'.format(ang*180/np.pi),bbox_inches='tight')
         # plt.show()
