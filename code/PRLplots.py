@@ -46,11 +46,11 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='')
     # fig setup
     fig = plt.figure(figsize=(10,5))
     # peaks of freqs vs xiT
-    gs1 = GridSpec(4, 10, bottom=0.535, top=0.98, left=0.1, right=0.95, wspace=0.0, hspace=0.05)# bottom spacing creates space for gs2 
+    gs1 = GridSpec(4, 10, bottom=0.635, top=0.98, left=0.1, right=0.95, wspace=0.0, hspace=0.05)# bottom spacing creates space for gs2 
     ax1 = fig.add_subplot(gs1[:, :])
     ax1.set_facecolor('#0b0000') # first color in hot cmap (black)
     # specific xiT
-    gs2 = GridSpec(8, 10, bottom=0.075, top=0.49, left=0.1, right=0.95, wspace=0.15, hspace=1.5) # nrows, ncols, l, r, wsp, hsp
+    gs2 = GridSpec(8, 10, bottom=0.075, top=0.59, left=0.1, right=0.95, wspace=0.15, hspace=1.5) # nrows, ncols, l, r, wsp, hsp
     ax11 = fig.add_subplot(gs2[:4, :5],sharex=ax1)
     ax12 = fig.add_subplot(gs2[:4, 5:],sharey=ax11,sharex=ax11)
     ax21 = fig.add_subplot(gs2[4:, :5],sharey=ax11,sharex=ax11)
@@ -59,6 +59,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='')
 
     x=[];y=[];z=[]
     # loop over concentrations
+    # w0,k0,_,_,_,_ = read_all_data(loc=sollocs[0])
     c=0
     for i in range(len(sollocs)):
         data=read_all_data(loc=sollocs[i])
@@ -116,7 +117,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='')
     p22 = ax_zoomed[-1].get_position().get_points().flatten()
     cbar = fig.add_axes([0.97, p22[1], 0.01, p11[-1]-p22[1]]) # [left bottom width height]
     plt.colorbar(sc, cax=cbar, orientation='vertical')
-    cbar.set_ylabel(r'$k_\parallel V_A\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
+    cbar.set_ylabel(r'$k_\parallel V_A /\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
     # savefig
     fig.savefig('PRL_Fig2_freq_peaks_'+name+'.pdf',bbox_inches='tight')
     fig.savefig('PRL_Fig2_freq_peaks_'+name+'.png',bbox_inches='tight')
@@ -244,10 +245,12 @@ if __name__=='__main__':
     # w0,k0,w,dw,kpara,kperp = data
     # Fig1_freqgrowth_freqkpara(w,dw,kpara,norm=[w0,k0],name='xiT_{}'.format(xi2_T[index]))
 
-    # # Fig2
-    # name = ['withT','noT']
-    # for i in range(0,2):
-    #     Fig2_peakfreq_freqextraction(sollocs[i],zoomed_sollocs[i],xi2[i],name=name[i])
+    # Fig2
+    name = ['withT','noT']
+    for i in range(0,2):
+        Fig2_peakfreq_freqextraction(sollocs[i],zoomed_sollocs[i],xi2[i],name=name[i])
+
+    sys.exit()
 
     # Fig3
     Fig3_diffgrowthrates_D_DT_contour(zoomed_sollocs[0],zoomed_sollocs[1],xi2_T=[0.1,0.3,0.5,0.7],\

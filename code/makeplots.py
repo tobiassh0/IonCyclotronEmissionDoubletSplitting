@@ -47,7 +47,6 @@ def read_pkl(quant):
 def extractPeaks(data,Nperw=1,prominence=0.3,plateau_size=None):
 	# tune till Nperw encapsulates all peaks (visually)
 	return signal.find_peaks(data,distance=Nperw,prominence=prominence,plateau_size=plateau_size)[0]
-
 ## 
 
 # ignore y axes tick labels
@@ -564,11 +563,17 @@ if __name__ == '__main__':
     }
 
     # # DT runs
-    # homeloc = homes.get('highkperp_T')
+    homeloc = homes.get('lowkperp_T')
     # XI2 = [i/100 for i in range(45,95,5)]
     # XI2.append(0)
     # XI2 = np.sort(XI2)
-    # sollocs = getsollocs(homeloc)
+    sollocs = getsollocs(homeloc)
+    import kernel_doppler as kd
+    import line_doppler as ld
+    kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
+    # ld.plot_doppler_line(sollocs=[sollocs[0]],labels=XI2[0])
+    sys.exit()
+
     # sollocs = [homeloc+'/run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
     # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
 
