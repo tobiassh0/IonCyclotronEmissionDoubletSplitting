@@ -570,8 +570,8 @@ if __name__ == '__main__':
     sollocs = getsollocs(homeloc)
     import kernel_doppler as kd
     import line_doppler as ld
-    kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
-    # ld.plot_doppler_line(sollocs=[sollocs[0]],labels=XI2[0])
+    # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
+    ld.plot_doppler_line(sollocs=sollocs,labels=XI2)
     sys.exit()
 
     # sollocs = [homeloc+'/run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
