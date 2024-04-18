@@ -84,7 +84,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='')
             ax_zoomed[c].annotate(r'$\xi_T=$'+str(xiT[i]),xy=(1,0.1),xycoords='data',color='k',fontsize=14,ha='left',va='bottom')
             # plot in separate axes
             thresh = (w/w0 < maxnormf) & (dw/w0 > 0)
-            sc = ax_zoomed[c].scatter(w[thresh]/w0,dw[thresh]/w0,c=kpara[thresh]/k0,edgecolor='none',cmap='hot',clim=(-2*k0,2*k0))
+            sc = ax_zoomed[c].scatter(w[thresh]/w0,dw[thresh]/w0,c=kpara[thresh]/k0,edgecolor='none',cmap='hot',clim=(-2,2)) # clim=(-2*k0,2*k0)
             # # testing
             # sc = ax_zoomed[c].scatter([0,1],[0,1],c=[-2*k0,2*k0],cmap='hot',clim=(-2*k0,2*k0))
             c+=1
@@ -110,7 +110,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='')
         # peaks
     p1 = ax1.get_position().get_points().flatten()
     cbar = fig.add_axes([0.97, p1[1], 0.01, p1[-1]-p1[1]]) # [left bottom width height]
-    plt.colorbar(sc, cax=cbar, orientation='vertical')
+    plt.colorbar(scpeak, cax=cbar, orientation='vertical')
     cbar.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         # growth rates
     p11 = ax_zoomed[0].get_position().get_points().flatten()
