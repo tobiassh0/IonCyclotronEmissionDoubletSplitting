@@ -47,7 +47,6 @@ def read_pkl(quant):
 def extractPeaks(data,Nperw=1,prominence=0.3,plateau_size=None):
 	# tune till Nperw encapsulates all peaks (visually)
 	return signal.find_peaks(data,distance=Nperw,prominence=prominence,plateau_size=plateau_size)[0]
-## 
 
 # ignore y axes tick labels
 def ignorex(lax):
@@ -543,6 +542,22 @@ def para_runs(loc):
     data=read_all_data(loc=loc)
     return None
 
+# parallel calculate and make all of the pkl files, optional bool to make plots as well in linear loop
+def para_calc(home,plot=True):
+    sollocs = getsollocs(home)
+    # parallel run to load/calculate data
+    pool = mp.Pool(2**(round(np.log2(mp.cpu_count()))-1)) # find nearest multiple of 2, then decrease by factor 1
+    pool.map(para_runs,sollocs).get(99999)
+    pool.close()
+    if plot:
+        for i in range(len(sollocs)):
+            print(sollocs[i])
+            os.chdir(sollocs[i])
+            data=read_all_data(loc=sollocs[i])
+            w0,k0,w,dw,kpara,kperp = data
+            make_all_plots(alldata=data)
+    return None
+
 # return list of sorted run solution files in home directory (defaults to cwd)
 def getsollocs(home=''):
     if home == '': home = os.getcwd()
@@ -551,31 +566,45 @@ def getsollocs(home=''):
 
 #-#-#
 if __name__ == '__main__':
+    
+    import kernel_doppler as kd
+    import line_doppler as ld
 
     ## BODY ## 
-    XI2 = [i/200 for i in range(0,200,5)]
-    print(XI2)
     homes = {
         'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/",
         'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/",
         'lowkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/",
         'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
     }
+    """
+    :: examples  :: 
+        # one file
+    LOC_FILE = homes.get(NAME) # if using dict
+    data=read_all_data(loc=LOC_FILE)
+    make_all_plots(alldata=data)
+
+        # multiple files
+    para_calc(LOC_FILE,plot=True)
+    """
+
+    homeloc = homes.get('lowkperp_T')
 
     # # DT runs
-    homeloc = homes.get('lowkperp_T')
-    # XI2 = [i/100 for i in range(45,95,5)]
-    # XI2.append(0)
-    # XI2 = np.sort(XI2)
-    sollocs = getsollocs(homeloc)
-    import kernel_doppler as kd
-    import line_doppler as ld
-    # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
-    ld.plot_doppler_line(sollocs=sollocs,labels=XI2)
-    sys.exit()
-
-    # sollocs = [homeloc+'/run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
+    # XI2 = [i/200 for i in range(0,200,5)]
+    # print(XI2)
+    # # XI2 = [i/100 for i in range(45,95,5)]
+    # # XI2.append(0)
+    # # XI2 = np.sort(XI2)
+    # sollocs = getsollocs(homeloc)
+    # XI2 = []
+    # for sol in sollocs: # missing 11% in XI2 array
+    #     XI2.append(float(sol.split('run')[1].split('_')[2]))
+    # XI2 = np.array(XI2)
+    # # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
+    # ld.plot_doppler_line(sollocs=sollocs,labels=XI2) # [str(i*100)+'%' for i in XI2])
+    # # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
+    # sys.exit()
 
     # D runs
     # homeloc = homes.get('highkperp_noT')
@@ -594,25 +623,21 @@ if __name__ == '__main__':
     # names = np.sort(names)
     # sollocs = np.array([homeloc+'run_2.07_0.0_-0.646_0.01_0.01_25.0_3.5_{}_1.0_4.0_{}_0.00015_2048/'.format(names[i],nearr[i]) for i in range(len(names))])
 
-    # # one file
-    # data=read_all_data(loc=LOC_FILE)
-    # make_all_plots(alldata=data)
-
-    # multiple files
+    # energy runs
     homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/D_T_energy_scan/'
     # get sollocs
     sollocs = getsollocs(homeloc)
-
-    pool = mp.Pool(2**(round(np.log2(mp.cpu_count()))-1)) # find nearest multiple of 2
-    pool.map(para_runs,sollocs).get(99999)
-    pool.close()
-    for i in range(len(sollocs)):
-        print(sollocs[i])
-        os.chdir(sollocs[i])
-        data=read_all_data(loc=sollocs[i])
-        w0,k0,w,dw,kpara,kperp = data
-        make_all_plots(alldata=data)
+    pitches = []
+    energies= []
+    for sol in sollocs: # missing 11% in XI2 array
+        pitches.append(float(sol.split('run')[1].split('_')[3]))
+        energies.append(float(sol.split('run')[1].split('_')[7]))
+    labels=[pitches,energies]
+    names=['maxvdop_pitches','maxvdop_energy']
+    for i in range(2):
+        ld.plot_doppler_line(sollocs=sollocs,labels=labels[i],plot_grad=True,name=names[i])
     sys.exit()
+
 
 
 """
