@@ -1,9 +1,9 @@
 
-from makeplots import *
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy
 import scipy.odr as odr
+from makeplots import *
 
 
 def func_linear(p,x):
@@ -49,38 +49,70 @@ def ODR_fit(x,y,sx=[],sy=[],beta0=[1,0],curve='linear'):
 	params_err = myout.sd_beta
 	return params, params_err
 
-def plotSemiCirclePolarCoords(ax,angles,data):
+def plotSemiCirclePolarCoords(angles,intensity,levels,label):
     """
         In:
+            axes : ravelled ax
             angles : the angle corresponding to the data
-            data : in effect the radius of the plot
+            intensity : in effect the radius of the plot, shape [len(angles), len(extracted growth rates)]
+            levels : number of plots, decided by # harmonics 
+            label : label (or rather name) of the plot (typically xiT)
     """
-    if np.max(np.abs(angles)) != np.pi:
+    if len(levels)//4 < 1:
+        nrows = 1
+    else:
+        nrows = len(levels)//4
+
+    fig,axes=plt.subplots(figsize=(8,10),nrows=nrows,ncols=4)
+    axes=axes.ravel()
+
+    if np.max(np.abs(angles)) != 180.0:
         print('# ERROR # :: Not a semi-circle') # TODO; make it so will plot over all angles provided
-    data_norm = data/np.max(data)
-    # plot as function of angles
-    ax.plot(data_norm*np.sin(angles),data_norm*np.cos(angles))
-    # plot integer radius lines (1/4, 1/2, 3/4 and 1 * maxdata)
-    for i in [0.25,0.5,0.75,1]:
-        radius = i
-        rangles = np.linspace(-np.pi,0,100)
-        if i == 1:
-            alpha = 1
-            linestyle='-'
-        else:
-            alpha = 0.5
-            linestyle='--'
-        ax.plot(radius*np.sin(rangles),radius*np.cos(rangles),color='darkgrey',linestyle=linestyle,alpha=alpha)
-        # ax.annotate("{:.3f}".format(radius*np.max(data))+r'$\Omega_i$',xy=(-radius,0.1),xycoords='data')
-    # plot constant angles
-    for j in [0,1/8,0.25,1/3,0.5,2/3,0.75,7/8,1]:
-        radius = np.array([0,1])
-        ax.plot(radius*np.sin(j*(-np.pi)),radius*np.cos(j*(-np.pi)),linestyle='--',color='darkgrey',alpha=0.75)
-        ax.annotate("{:.1f}".format(-j*np.pi*180/np.pi)+r"$^\circ$",xy=(np.sin(j*(-np.pi)),np.cos(j*(-np.pi))),xycoords='data')
-    ax.set_xlim(-1.1,0)
-    ax.set_ylim(-1.1,1.1)
-    ax.tick_params(axis='both',bottom=False,top=False,left=False,right=False,labelbottom=False,labeltop=False,labelleft=False,labelright=False)
-    return ax
+    for i in range(intensity.shape[0]):
+        data = intensity[i,:]
+        ax = axes[i] # already axes.ravel()
+        data_norm = data/np.max(data)
+        # plot as function of angles
+        ax.plot(data_norm*np.sin(angles*np.pi/180),data_norm*np.cos(angles*np.pi/180))
+        # plot integer radius lines (1/4, 1/2, 3/4 and 1 * maxdata)
+        for i in [0.25,0.5,0.75,1]:
+            radius = i
+            rangles = np.linspace(-180,0,100)
+            if i == 1:
+                alpha = 1
+                linestyle='-'
+            else:
+                alpha = 0.5
+                linestyle='--'
+            ax.plot(radius*np.sin(rangles*np.pi/180),radius*np.cos(rangles*np.pi/180),color='darkgrey',linestyle=linestyle,alpha=alpha)
+            # ax.annotate("{:.3f}".format(radius*np.max(data))+r'$\Omega_i$',xy=(-radius,0.1),xycoords='data')
+        # plot constant angles
+        for j in [0,1/8,0.25,1/3,0.5,2/3,0.75,7/8,1]:
+            radius = np.array([0,1])
+            ax.plot(radius*np.sin(j*(-np.pi)),radius*np.cos(j*(-np.pi)),linestyle='--',color='darkgrey',alpha=0.75)
+            ax.annotate("{:.1f}".format((-j*np.pi)*180/np.pi)+r"$^\circ$",xy=(np.sin(j*(-np.pi)),np.cos(j*(-np.pi))),xycoords='data')
+        ax.set_xlim(-1.1,0)
+        ax.set_ylim(-1.1,1.1)
+        ax.tick_params(axis='both',bottom=False,top=False,left=False,right=False,labelbottom=False,labeltop=False,labelleft=False,labelright=False)
+        ax.annotate("{:.0f}".format(levels[i])+r"$\Omega_i$",xy=(0.05,0.05),xycoords='axes fraction',va='bottom',ha='left')
+    fig.savefig('semicircle_intensity_angle_XI2_{}.png'.format(label),bbox_inches='tight')
+    return None
+
+def plot_doppler_line(angles,Zij,levels,level=0):
+    ith_level = int(len(levels)*level/levels[-1])
+    fig_line,ax_line=plt.subplots(figsize=(4,int(1.5*len(angles))),nrows=len(angles),sharex=True)
+    ax_line[0].set_xlim(wmin,wmax)
+    # ax_line[-1].imshow(Z/norm[0],origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=extents)
+    # loop over angles
+    for j in range(len(angles)):
+        ax_line[j].set_ylim(0) # no negative growths
+        ax_line[j].annotate(rangles[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
+        ax_line[j].locator_params(axis='y',nbins=4)
+        ax_line[j].plot(np.linspace(xlim[0],xlim[1],len(Zii[ith_level,j,:])),Zij[ith_level,j,:],color=colors[j],alpha=1/len(px_xposini))
+    ax_line[-1].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
+    fig_line.supylabel('Growth rate '+r'$[\Omega_i]$',**tnrfont,x=-0.1)
+    fig_line.savefig('lines_XI2_{}_n_{}_.png'.format(label,xposini[-1]),bbox_inches='tight')
+    pass
 
 def LineBoxIntersection(Ys,Ye,Xn,Yn,XL,YL,theta):
     """
@@ -89,27 +121,27 @@ def LineBoxIntersection(Ys,Ye,Xn,Yn,XL,YL,theta):
             Ys, Ye : start and end point of line on y-axis
             Yn, Xn : offset of line mid-point
             YL, XL : total length of box in Y and X (pixel coordinates)
-            theta : positive angle clockwise from north, represents 1/gradient of line
+            theta : positive angle clockwise from north [deg], represents 1/gradient of line
     """
     # +ve angle clockwise from north
-    Xs = (Ys-Yn)*np.tan(theta)+Xn ; Xe = (Ye-Yn)*np.tan(theta)+Xn
+    Xs = (Ys-Yn)*np.tan(theta*np.pi/180)+Xn ; Xe = (Ye-Yn)*np.tan(theta*np.pi/180)+Xn
     # check initial co-ordinates, if wrong then use other bounds 
     if Xs < 0:
         Xs = 0
-        Ys = Yn+((Xs-Xn)/np.tan(theta))
+        Ys = Yn+((Xs-Xn)/np.tan(theta*np.pi/180))
     if Xs > XL:
         Xs = XL
-        Ys = Yn+((Xs-Xn)/np.tan(theta))
+        Ys = Yn+((Xs-Xn)/np.tan(theta*np.pi/180))
     if Xe > XL:
         Xe = XL
-        Ye = Yn+((Xe-Xn)/np.tan(theta)) 
+        Ye = Yn+((Xe-Xn)/np.tan(theta*np.pi/180)) 
     if Xe < 0:
         Xe = 0
-        Ye = Yn+((Xe-Xn)/np.tan(theta)) 
+        Ye = Yn+((Xe-Xn)/np.tan(theta*np.pi/180)) 
     xlim = [Xs,Xe] ; ylim = [Ys,Ye]
     return np.around(xlim), np.around(ylim)
 
-def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1],lsize=None,label='',plot=False):
+def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1],lsize=None,label='',plot_semi=False,plot=False,colorarr=True):
     """
         In:
             Z : 2d matrix of data points to calculate integral over
@@ -121,26 +153,31 @@ def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1]
     Ny, Nx = Z.shape
     if not lsize:
         lsize = np.sqrt(Nx**2+Ny**2) # max length of line within imshow square (px coords)
+    # set angle array if empty
     if angles==[]:
-        angles = np.linspace(0,-2*np.pi,100)
+        angles = np.linspace(0,-180,100)
+    # color array
+    if colorarr:
+        colors = plt.cm.rainbow(np.linspace(0,1,len(angles)))
+    else:
+        colors = ['k']*len(angles)
+
+    # setup empty arrays
     dopmaxang=np.zeros(len(xposini))
     zi = np.zeros((len(angles),int(lsize)))
     intensity = np.zeros((len(xposini),len(angles)))
+    rangles = np.zeros(len(angles)) # real angles
+    Zij = np.zeros((len(xposini),len(angles),int(lsize)))
+    
     # limits of box, normalised units
     rowlim = np.array(rowlim) ; collim = np.array(collim)
     wmin, wmax = (collim/norm[0])
     kparamin, kparamax = (rowlim/norm[1])
     extents = [wmin,wmax,kparamin,kparamax]
+    
     # transform to pixel coords
     px_xposini = (np.array(xposini)/(wmax-wmin))*Nx
-    if len(xposini)//4 < 1:
-        nrows = 1
-    else:
-        nrows = len(xposini)//4
-    if plot:
-        fig_semi,ax_semi=plt.subplots(figsize=(8,10),nrows=nrows,ncols=4)
-        ax_semi=ax_semi.ravel()
-        fig,ax=plt.subplots(nrows=2)
+
     # loop through angles
     for i in range(len(px_xposini)):
         Xn = px_xposini[i] # number of cells in x
@@ -149,40 +186,40 @@ def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1]
             # find intersection points between line and box (pixel coords)
             Ystart = Ny ; Yend = 0
             xlim, ylim = LineBoxIntersection(Ystart,Yend,Xn,Yn,Nx,Ny,angles[j])
+            # lsize = np.sqrt((xlim[-1]-xlim[0])**2+(ylim[-1]-ylim[0])**2)
             # find data points along line
             x = np.linspace(xlim[0],xlim[1],int(lsize))
             y = np.linspace(ylim[0],ylim[1],int(lsize))
             zi[j,:] = scipy.ndimage.map_coordinates(Z/norm[0],np.vstack((y,x))) # normalised growth rates
+            Zij[i,j,:]=zi[j,:]
             # convert all to real coordinates
             xlim = (collim[0]/norm[0])+xlim*((collim[1]-collim[0])/norm[0])/Nx
             ylim = (rowlim[0]/norm[1])+ylim*((rowlim[1]-rowlim[0])/norm[1])/Ny
+            rangles[j] = np.arctan((xlim[-1]-xlim[0])/(ylim[-1]-ylim[0]))*180/np.pi
             # summate all points # "growth per (dkpara,dw) cell" 
-            intensity[i,j] = np.sum(zi[j,:])/len(zi[j,:]) # normalise to number of cells along line
-            # example plot
-            if plot:
-                ax[0].imshow(Z,origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=extents)
-                ax[0].plot(xlim,ylim,'ko--',alpha=j/len(angles)) # color=colors[j])
-                ax[1].plot(np.linspace(xlim[0],xlim[1],len(zi[j,:])),zi[j,:],alpha=j/len(angles)) # ,color=colors[j])#
+            tzi = zi[j,:]
+            tzi[tzi < 0] = 0 # no negative growth rates affecting intensity extraction
+            intensity[i,j] = np.sum(tzi)/len(tzi) # normalise to number of cells along line
+            # # example plot
+            # if plot:
+            #     ax[0].imshow(Z,origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=extents)
+            #     ax[0].plot(xlim,ylim,color=colors[j],linestyle='--')#,alpha=1/len(angles))
+            #     ax[1].plot(np.linspace(xlim[0],xlim[1],len(zi[j,:])),zi[j,:],color=colors[j],label=rangles[j])#,alpha=1/len(angles))
 
         # find maximum intensity as a function of angle per xposini
         maxintarg = np.argmax(intensity[i,:])
-        maxang = angles[maxintarg]
-        print('Max intensity angle [rad]: ',maxang)
+        maxang = rangles[maxintarg]
+        print('Max intensity angle [deg]: ',maxang)
         dopmaxang[i] = maxang
-        if plot:
-            ax[0].set_ylim(kparamin,kparamax) ; ax[0].set_xlim(wmin,wmax)
-            ax[0].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
-            ax[0].set_ylabel('Parallel Wavenumber '+r'$[\Omega_i/V_A]$',**tnrfont)
-            ax[1].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
-            ax[1].set_ylabel('Growth Rate '+r'$[\Omega_i]$',**tnrfont)
-            fig.savefig('all_lines_XI2_{}.png'.format(label))
-            ax_semi[i] = plotSemiCirclePolarCoords(ax_semi[i],angles,intensity[i,:])
-            ax_semi[i].annotate("{:.0f}".format(xposini[i])+r"$\Omega_i$",xy=(0.05,0.05),xycoords='axes fraction',va='bottom',ha='left')
-    # determine if want to plot
-    if plot:
-        fig_semi.savefig('semicircle_intensity_angle_XI2_{}.png'.format(label),bbox_inches='tight')
-        plt.clf()
-    return intensity, dopmaxang
+        # # example plot
+        # ax[0].set_ylim(kparamin,kparamax) ; ax[0].set_xlim(wmin,wmax)
+        # # ax[0].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
+        # ax[0].set_ylabel('Parallel Wavenumber '+r'$[\Omega_i/V_A]$',**tnrfont)
+        # ax[1].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
+        # ax[1].set_ylabel('Growth Rate '+r'$[\Omega_i]$',**tnrfont)
+        # ax[1].legend(loc='best')
+        # fig.savefig('all_lines_XI2_{}.png'.format(label))
+    return intensity, dopmaxang, Zij
 
 def plotSumGrowthAngle(angles,intensity,levels,label):
     # plot mock "hist"
@@ -190,17 +227,17 @@ def plotSumGrowthAngle(angles,intensity,levels,label):
     for i in range(intensity.shape[0]):
         ax.fill_between(angles,intensity[i,:],color='r',alpha=1/len(levels))
     ax.set_xlim(np.min(angles),np.max(angles))
-    ax.set_xlabel(r'$\theta$'+' '+'[rad]',**tnrfont)
+    ax.set_xlabel(r'$\theta$'+' '+'[deg]',**tnrfont)
     ax.set_ylabel(r'Growth Rate per cell '+r'$[\Omega_i]$',**tnrfont)
-    ax.set_ylim(0,0.012) # don't plot negative growths # hardcoded
+    ax.set_ylim(0)#,0.012) # don't plot negative growths # hardcoded
     fig.savefig('intensity_angle_XI2_{}.png'.format(label),bbox_inches='tight')
     plt.clf()
     return None
 
 def get_line_doppler(rowdata,coldata,data,datanorm=1,norm=[1,1],rowlim=(None,None),collim=(None,None),thresh_growth=0.001,\
-                    label='',levels=range(0,16),angles=[]):
+                    label='',levels=range(0,16),angles=[],plot=False,plot_semi=False):
     # get 2d map of y vs x (row vs col)
-    Z,extents=make2D(rowdata,coldata,data,rowlim=rowlim,collim=collim,limits=True,dump=False,name='',bins=(700,512))
+    Z,extents=make2D(rowdata,coldata,data,rowlim=rowlim,collim=collim,limits=True,dump=False,name='',bins=(512,512))
     # normalise extents
     extents=[extents[0]/norm[0],extents[1]/norm[0],extents[2]/norm[1],extents[3]/norm[1]]
     # remove anomalous
@@ -210,20 +247,19 @@ def get_line_doppler(rowdata,coldata,data,datanorm=1,norm=[1,1],rowlim=(None,Non
                 Z[i,j] = 0
     # plt.imshow(Z,origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=extents) ; plt.show() ; sys.exit()
     # find gradients using integral along line method
-    intensity, dopmaxang = line_integrate(Z,xposini=levels,angles=angles,rowlim=rowlim,collim=collim,norm=norm,label=label)
-    # plotSumGrowthAngle(angles,intensity,levels,label)
-    return intensity, dopmaxang
+    intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=rowlim,collim=collim,norm=norm,label=label,plot=plot,plot_semi=plot_semi)
+    return intensity, dopmaxang, Zij
 
-def plot_doppler_line(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=False,plot_grad=True,name=''):
+def plot_all(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=False,plot_grad=True,plot=False,plot_semi=False,name=''):
     if name == '':
         if plot_angles: name = 'maxangle_xiT'
-        if plot_dop: name = 'maxvdop_xiT'
+        if plot_grad: name = 'maxvdop_xiT'
     if plot_grad == plot_angles:
         plot_angles = False
         plot_grad = True
 
     if angles == []:
-        angles = np.linspace(-0.6,0,100) # limit to find dopplershift
+        angles = np.linspace(-180,0,360) # limit to find dopplershift
     if len(sollocs) != len(labels):
         labels = np.arange(0,len(sollocs),1)
     dopmaxangles = np.zeros((len(sollocs),len(levels))) # max angle per label
@@ -232,14 +268,21 @@ def plot_doppler_line(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_a
     allabels = np.zeros((len(sollocs),len(levels))) # 2d allabels
     fig,ax = plt.subplots(figsize=(8,6))
     for i in range(len(sollocs)):
+        print(sollocs[i])
         w0,k0,w,dw,kpara,kperp=read_all_data(loc=sollocs[i])
-        intensity, dopmaxang=get_line_doppler(kpara,w,dw,datanorm=w0,rowlim=(-4*k0,4*k0),collim=(0,15*w0),\
-                                                norm=[w0,k0],label=labels[i],levels=levels,angles=angles)
+        intensity, dopmaxang, Zij = get_line_doppler(kpara,w,dw,datanorm=w0,rowlim=(-4*k0,4*k0),collim=(0,15*w0),\
+                                                norm=[w0,k0],label=labels[i],levels=levels,angles=angles,plot=plot,plot_semi=plot_semi)
         # assign large arrays
         dopmaxangles[i,:] = dopmaxang
         allabels[i,:] = [labels[i] for r in range(len(dopmaxang))]
         dopmeanangles[i]= np.mean(dopmaxang)
         dopstdangles[i] = np.std(dopmaxang) # for all levels, given solloc
+        # plot semi circles
+        plotSemiCirclePolarCoords(angles,intensity,levels,labels[i])
+        # plot line doppler
+        plot_doppler_line(angles,Zij,levels,level=0)
+        # plot summated growth per harmonics through angles
+        plotSumGrowthAngle(angles,intensity,levels,labels[i])
 
     if plot_angles:
         # fit straight line odr
@@ -254,6 +297,32 @@ def plot_doppler_line(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_a
         ax.set_ylabel(r'$v_{dop}$'+' '+'['+r'$V_A$'+']',**tnrfont)
     ax.set_xlim(labels[0],labels[-1])
     ax.set_xlabel(r'$\xi_T$',**tnrfont)
-    plt.show()
     fig.savefig(name+'.png',bbox_inches='tight')
     return None
+
+if __name__=='__main__':
+    homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/'#/home/space/phrmsf/Documents/ICE_DS/JET26148/D_T_energy_scan/'
+    sollocs = [getsollocs(homeloc)[0]]
+    print(sollocs)
+    labels = ['1MeV']
+    angles = np.linspace(-180,0,360) # np.array([-80,-85,-90,-95,-100])
+    levels = range(0,16)
+    # for i in range(len(sollocs)):
+    os.chdir(sollocs[0])
+    w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[0])
+    Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
+    intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0],label=labels[0])
+    # plotSumGrowthAngle(angles,intensity,levels,labels[0])
+    fig,ax=plt.subplots(figsize=(8,6))
+    ax.imshow(Z,origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=[0,15,-4,4])
+    for i in range(len(levels)):
+        # plotSemiCirclePolarCoords(ax,angles,intensity[i,:])
+        print(dopmaxang[i])
+        warr = np.linspace(0,15,100)
+        karr = (warr-i)*(1/np.tan(dopmaxang[i]*np.pi/180))
+        ax.plot(warr,karr,'k--',alpha=0.5)
+    ax.set_xlim(0,15)
+    ax.set_ylim(-4,4)
+    plt.show()
+    sys.exit()
+
