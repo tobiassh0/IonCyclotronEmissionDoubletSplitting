@@ -26,7 +26,13 @@ from functools import partial
 import os,sys
 
 tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
+
 ## 
+class constants():
+    def __init__(self):
+        self.c = 2.9979246E+08		# ms^[-1] #
+
+const = constants()
 
 ## Dump pkl files
 def dumpfiles(array, quant):
@@ -655,7 +661,7 @@ if __name__ == '__main__':
     #     plot_frq_growth_angles(Z,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
     # sys.exit()
 
-    # # DT runs
+    # DT runs
     # XI2 = [i/200 for i in range(0,200,5)]
     # print(XI2)
     # XI2 = [i/100 for i in range(45,95,5)]
@@ -667,11 +673,11 @@ if __name__ == '__main__':
         XI2.append(float(sol.split('run')[1].split('_')[2]))
     XI2 = np.array(XI2)
     # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
-    ld.plot_all(sollocs=sollocs,labels=XI2,plot_semi=True) # [str(i*100)+'%' for i in XI2])
+    ld.plot_all(sollocs=sollocs,labels=XI2,name='maxvdop_xiT',plot_angles=True,xlabel=r'$\xi_T$') # [str(i*100)+'%' for i in XI2])
     # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
     sys.exit()
 
-    # D runs
+    # # D runs
     # homeloc = homes.get('highkperp_noT')
     # runs = getsolloc(homeloc)
     # nearr=[]
@@ -700,7 +706,7 @@ if __name__ == '__main__':
     labels=[pitches,energies]
     names=['maxvdop_pitches','maxvdop_energy']
     for i in range(2):
-        ld.plot_doppler_line(sollocs=sollocs,labels=labels[i],plot_grad=True,name=names[i])
+        ld.plot_all(sollocs=sollocs,labels=labels[i],plot_grad=True,name=names[i],xlabel=r'$E_\alpha$')
     sys.exit()
 
 

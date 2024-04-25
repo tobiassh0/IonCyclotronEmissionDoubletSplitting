@@ -5,7 +5,6 @@ import scipy
 import scipy.odr as odr
 from makeplots import *
 
-
 def func_linear(p,x):
 	m,c = p
 	return m*x + c
@@ -96,6 +95,7 @@ def plotSemiCirclePolarCoords(angles,intensity,levels,label):
         ax.tick_params(axis='both',bottom=False,top=False,left=False,right=False,labelbottom=False,labeltop=False,labelleft=False,labelright=False)
         ax.annotate("{:.0f}".format(levels[i])+r"$\Omega_i$",xy=(0.05,0.05),xycoords='axes fraction',va='bottom',ha='left')
     fig.savefig('semicircle_intensity_angle_XI2_{}.png'.format(label),bbox_inches='tight')
+    plt.clf()
     return None
 
 def plot_doppler_line(angles,Zij,levels,level=0):
@@ -141,7 +141,7 @@ def LineBoxIntersection(Ys,Ye,Xn,Yn,XL,YL,theta):
     xlim = [Xs,Xe] ; ylim = [Ys,Ye]
     return np.around(xlim), np.around(ylim)
 
-def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1],lsize=None,label='',plot_semi=False,plot=False,colorarr=True):
+def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1],lsize=None,label='',colorarr=True):
     """
         In:
             Z : 2d matrix of data points to calculate integral over
@@ -155,7 +155,7 @@ def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1]
         lsize = np.sqrt(Nx**2+Ny**2) # max length of line within imshow square (px coords)
     # set angle array if empty
     if angles==[]:
-        angles = np.linspace(0,-180,100)
+        angles = np.linspace(0,-180,360)
     # color array
     if colorarr:
         colors = plt.cm.rainbow(np.linspace(0,1,len(angles)))
@@ -195,7 +195,7 @@ def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1]
             # convert all to real coordinates
             xlim = (collim[0]/norm[0])+xlim*((collim[1]-collim[0])/norm[0])/Nx
             ylim = (rowlim[0]/norm[1])+ylim*((rowlim[1]-rowlim[0])/norm[1])/Ny
-            rangles[j] = np.arctan((xlim[-1]-xlim[0])/(ylim[-1]-ylim[0]))*180/np.pi
+            rangles[j] = np.arctan((xlim[-1]-xlim[0])/(ylim[-1]-ylim[0]))*180/np.pi # [deg]
             # summate all points # "growth per (dkpara,dw) cell" 
             tzi = zi[j,:]
             tzi[tzi < 0] = 0 # no negative growth rates affecting intensity extraction
@@ -235,9 +235,9 @@ def plotSumGrowthAngle(angles,intensity,levels,label):
     return None
 
 def get_line_doppler(rowdata,coldata,data,datanorm=1,norm=[1,1],rowlim=(None,None),collim=(None,None),thresh_growth=0.001,\
-                    label='',levels=range(0,16),angles=[],plot=False,plot_semi=False):
+                    label='',levels=range(0,16),angles=[],bins=(512,512)):
     # get 2d map of y vs x (row vs col)
-    Z,extents=make2D(rowdata,coldata,data,rowlim=rowlim,collim=collim,limits=True,dump=False,name='',bins=(512,512))
+    Z,extents=make2D(rowdata,coldata,data,rowlim=rowlim,collim=collim,limits=True,dump=False,name='',bins=bins)
     # normalise extents
     extents=[extents[0]/norm[0],extents[1]/norm[0],extents[2]/norm[1],extents[3]/norm[1]]
     # remove anomalous
@@ -247,61 +247,101 @@ def get_line_doppler(rowdata,coldata,data,datanorm=1,norm=[1,1],rowlim=(None,Non
                 Z[i,j] = 0
     # plt.imshow(Z,origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=extents) ; plt.show() ; sys.exit()
     # find gradients using integral along line method
-    intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=rowlim,collim=collim,norm=norm,label=label,plot=plot,plot_semi=plot_semi)
+    intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=rowlim,collim=collim,norm=norm,label=label)
     return intensity, dopmaxang, Zij
 
-def plot_all(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=False,plot_grad=True,plot=False,plot_semi=False,name=''):
+def plot_all(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=False,plot_grad=False,plot=False,name='',\
+            xlabel=r'$\xi_T$',bins=(512,512),fit_ODR=True):
+    # check all params at start
     if name == '':
         if plot_angles: name = 'maxangle_xiT'
         if plot_grad: name = 'maxvdop_xiT'
+    # plotting v_dop gradient or angles
     if plot_grad == plot_angles:
         plot_angles = False
         plot_grad = True
-
+    
     if angles == []:
         angles = np.linspace(-180,0,360) # limit to find dopplershift
     if len(sollocs) != len(labels):
         labels = np.arange(0,len(sollocs),1)
+    # maximum length of line (No. cells)
+    lsize = int(np.sqrt(bins[0]**2 + bins[1]**2))
     dopmaxangles = np.zeros((len(sollocs),len(levels))) # max angle per label
     dopmeanangles= np.zeros(len(sollocs))
     dopstdangles = np.zeros(len(sollocs)) # std angle per label    
     allabels = np.zeros((len(sollocs),len(levels))) # 2d allabels
-    fig,ax = plt.subplots(figsize=(8,6))
     for i in range(len(sollocs)):
-        print(sollocs[i])
         w0,k0,w,dw,kpara,kperp=read_all_data(loc=sollocs[i])
-        intensity, dopmaxang, Zij = get_line_doppler(kpara,w,dw,datanorm=w0,rowlim=(-4*k0,4*k0),collim=(0,15*w0),\
-                                                norm=[w0,k0],label=labels[i],levels=levels,angles=angles,plot=plot,plot_semi=plot_semi)
+        Va_c = getVa(w0,k0)/const.c # unitless
+        try:
+            Zij       = read_pkl(name+'_{}_Zij_lvlf_{}_angf_{}_lsize_{}'.format(i,levels[-1],angles[-1],lsize))
+            intensity = read_pkl(name+'_{}_intensity_{}_{}'.format(i,levels[-1],angles[-1]))
+            dopmaxang = read_pkl(name+'_{}_dopmaxang_{}'.format(i,levels[-1]))
+        except:
+            print("{:.2f}%".format(100*i/len(sollocs)))
+            intensity, dopmaxang, Zij = get_line_doppler(kpara,w,dw,datanorm=w0,rowlim=(-4*k0,4*k0),collim=(0,15*w0),\
+                                                    norm=[w0,k0],label=labels[i],levels=levels,angles=angles)
+            dumpfiles(Zij,name+'_{}_Zij_lvlf_{}_angf_{}_lsize_{}'.format(i,levels[-1],angles[-1],lsize))
+            dumpfiles(intensity,name+'_{}_intensity_{}_{}'.format(i,levels[-1],angles[-1]))
+            dumpfiles(dopmaxang,name+'_{}_dopmaxang_{}'.format(i,levels[-1]))
         # assign large arrays
-        dopmaxangles[i,:] = dopmaxang
         allabels[i,:] = [labels[i] for r in range(len(dopmaxang))]
+        dopmaxangles[i,:] = dopmaxang
         dopmeanangles[i]= np.mean(dopmaxang)
         dopstdangles[i] = np.std(dopmaxang) # for all levels, given solloc
-        # plot semi circles
-        plotSemiCirclePolarCoords(angles,intensity,levels,labels[i])
-        # plot line doppler
-        plot_doppler_line(angles,Zij,levels,level=0)
-        # plot summated growth per harmonics through angles
-        plotSumGrowthAngle(angles,intensity,levels,labels[i])
-
+        # make plots
+        if plot:
+            # plot semi circles
+            plotSemiCirclePolarCoords(angles,intensity,levels,labels[i])
+            # plot line doppler
+            if len(angles) <= 12:
+                plot_doppler_line(angles,Zij,levels,level=0)
+            # plot summated growth per harmonics through angles
+            plotSumGrowthAngle(angles,intensity,levels,labels[i])
+    # # #
+    fig,ax = plt.subplots(figsize=(8,6))
+    dopmaxangles = dopmaxangles.flatten()
+    allabels = allabels.flatten()
     if plot_angles:
         # fit straight line odr
-        ax.scatter(allabels.flatten(),dopmaxangles.flatten(),color='k',alpha=0.25) #1/len(levels))
-        params, params_err = ODR_fit(allabels.flatten(),dopmaxangles.flatten(),beta0=[-0.15,-0.4],curve='linear')
-        # params, params_err = ODR_fit(labels,dopmeanangles,sy=dopstdangles,beta0=[-0.15,-0.4],curve='linear')
-        print('grad and intercept :',params,'errors: ',params_err)
-        ax.plot(labels,labels*params[0]+params[1],color='r',linestyle='--')
-        ax.set_ylabel(r'$\theta_{max}$'+' '+'[rad]',**tnrfont)
+        ax.scatter(allabels,dopmaxangles,color='k',alpha=1/len(levels))
+        if fit_ODR:
+            lowerb, upperb = [-60,-40] # lower, upper bound angles
+            thresh = (dopmaxangles>lowerb) & (dopmaxangles<upperb)
+            params, params_err = ODR_fit(allabels[thresh],dopmaxangles[thresh],beta0=[-1.0,-45.0],curve='linear')
+            # params, params_err = ODR_fit(labels,dopmeanangles,sy=dopstdangles,beta0=[-0.15,-0.4],curve='linear')
+            print('grad and intercept :',params,'errors: ',params_err)
+            ax.plot(labels,labels*params[0]+params[1],color='r',linestyle='--')
+            ax.annotate(r'$d\theta/d\xi_T=$'+'{:.2f}'.format(params[0])+r'$\pm$'+'{:.2f}'.format(params_err[0]),\
+                        xy=(labels[1],labels[1]*params[0]+params[1]+upperb),xycoords='data',ha='left',va='bottom',color='r',**tnrfont)
+        ax.set_ylabel(r'$\theta_{max}$'+' '+'[deg]',**tnrfont)
+        ax.set_ylim(np.min(angles),np.max(angles))
+        name=name+'_angles'
     if plot_grad:
-        ax.scatter(allabels.flatten(),np.tan(dopmaxangles.flatten()),color='k',alpha=0.25) #1/len(levels))
-        ax.set_ylabel(r'$v_{dop}$'+' '+'['+r'$V_A$'+']',**tnrfont)
-    ax.set_xlim(labels[0],labels[-1])
-    ax.set_xlabel(r'$\xi_T$',**tnrfont)
+        ax.scatter(allabels,np.tan(dopmaxangles)*Va_c,color='k',alpha=1/len(levels)) #1/len(levels))
+        ax.set_ylabel(r'$v_{dop}/c$',**tnrfont)
+        ax.set_ylim(np.min(np.tan(dopmaxangles))*Va_c,np.max(np.tan(dopmaxangles))*Va_c)
+        if fit_ODR:
+            lowerb, upperb = [-0.125,0.125] # lower bound, upper
+            thresh = (np.tan(dopmaxangles)*Va_c>lowerb) & (np.tan(dopmaxangles)*Va_c<upperb)
+            params, params_err = ODR_fit(allabels[thresh],np.tan(dopmaxangles[thresh])*Va_c,beta0=[-1.0,0.0],curve='linear')
+            print('grad and intercept :',params,'errors: ',params_err)
+            ax.plot(labels,labels*params[0]+params[1],color='r',linestyle='--')
+            ax.annotate(r'$dv_{dop}/d\xi_T=$'+'{:.2f}'.format(params[0])+r'$\pm$'+'{:.2f}'.format(params_err[0]),\
+                        xy=(labels[1],labels[1]*params[0]+params[1]+upperb),xycoords='data',ha='left',va='bottom',color='r',**tnrfont)
+        name=name+'_grad'
+    if fit_ODR:
+        ax.axhline(lowerb,color='r',linestyle='--')
+        ax.axhline(upperb,color='r',linestyle='--')
+    ax.set_xlim(np.min(labels),np.max(labels))
+    ax.set_xlabel(xlabel,**tnrfont)
+    plt.show()
     fig.savefig(name+'.png',bbox_inches='tight')
     return None
 
 if __name__=='__main__':
-    homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/'#/home/space/phrmsf/Documents/ICE_DS/JET26148/D_T_energy_scan/'
+    homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/D_T_energy_scan/' # /home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/
     sollocs = [getsollocs(homeloc)[0]]
     print(sollocs)
     labels = ['1MeV']
