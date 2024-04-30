@@ -148,7 +148,9 @@ def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1]
             xposini : x positions, in units of x-axis, as to where take line integral
             angles : angles over which to loop, defaults to 0 -> 90deg
         Out:
-            dopangmax : array of angles per xposini that correspond to the strongest total intensity along the line 
+            intensity : summated line intensity normalised to the number of cells within the line (sum(zi)/len(zi))
+            dopangmax : array of angles per xposini that correspond to the strongest total intensity along the line
+            Zij       : 3d array of the line intensity [shape of (len(xposini), len(angles), len(zi))]
     """
     Ny, Nx = Z.shape
     if not lsize:
