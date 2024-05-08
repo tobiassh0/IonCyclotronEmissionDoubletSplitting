@@ -26,6 +26,7 @@ from functools import partial
 import os,sys
 
 tnrfont = {'fontsize':20,'fontname':'Times New Roman'}
+imkwargs = {'origin':'lower','interpolation':'none','aspect':'auto'}
 
 ## 
 class constants():
