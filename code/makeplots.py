@@ -457,42 +457,8 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
     fig_line.savefig(os.getcwd()+'/freq_growth_angles_combi.png',bbox_inches='tight')
     return None
 
-# # plot freq vs. growth for a given (range of) angle(s)
-# def plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=None,norm=[None,None],angles=[88.,88.5,89.,89.5],labels=['',''],clims=[0,0.5],\
-#                             percentage=0.0025,smooth=True):
-#     thresh = (w < maxnormf*norm[0]) & (dw > 0) # less than maxnormf & growth rates greater than 0
-#     kpara = kpara[thresh] ; w = w[thresh] ; dw = dw[thresh]
-#     for ang in angles: # TODO; dont have to loop over angles, could loop over once and assign growths based on array of angles given
-#         tkpara = np.zeros(len(kpara))
-#         # tkperp = np.zeros(len(kperp))
-#         tw = np.zeros(len(w))
-#         tdw = np.zeros(len(dw))
-#         fig,ax=plt.subplots(figsize=(8,6))
-#         ang *= np.pi/180 # radians
-#         for k in range(len(kpara)): # provide error bars between as grid is not 100% accurate to angles
-#             if np.arctan(kperp[k]/kpara[k]) < ang*(1+percentage) and np.arctan(kperp[k]/kpara[k]) > ang*(1-percentage):
-#                 tkpara[k] = kpara[k]
-#                 tw[k] = w[k]
-#                 tdw[k] = dw[k]
-#         sc = ax.scatter(tw/norm[0],tdw/norm[0],c=tkpara/norm[1],edgecolor='none')#,vmin=clims[0],vmax=clims[1])
-#         cbar = plt.colorbar(sc)
-#         cbar.ax.set_ylabel(r'$k_\parallel v_A/\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
-#         ax.set_xlabel(labels[0],**tnrfont)
-#         ax.set_ylabel(labels[1],**tnrfont)
-#         ax.set_xlim(0,maxnormf)
-#         ax.set_ylim(0,0.15)
-#         if smooth:
-#             sw, sdw = make1D(tw,tdw,norm=(norm[0],norm[0]),maxnormx=maxnormf,bins=200) # very small No. bins
-#             ax.plot(sw/norm[0],sdw/norm[0],color='k')
-#         ax.annotate(r"${:.2f}\pm{:.2f}$".format(ang*180/np.pi,ang*percentage*180/np.pi), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
-#         fig.savefig('freq_growth_{:.1f}.png'.format(ang*180/np.pi),bbox_inches='tight')
-#         # plt.show()
-#         plt.clf()
-#         print('plotted freq growth ang {:.1f}'.format(ang*180/np.pi))
-#     return None
-
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
-def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
+def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
     plot_2D=kwargs.get('plot_2D')
     plot_3D=kwargs.get('plot_3D')
     plot_hm=kwargs.get('plot_hm')
@@ -519,8 +485,8 @@ def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
     # loop over concentrations
     for i in range(len(loop)):
         print(loop[i])
-        os.chdir(solloc[i])
-        data=read_all_data(loc=solloc[i])
+        os.chdir(sollocs[i])
+        data=read_all_data(loc=sollocs[i])
         w0,k0,w,dw,kpara,kperp = data
         xarr, zarr = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
         # 2D plot
@@ -561,7 +527,7 @@ def get_peak_freqs(solloc=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
         cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         ax2d.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         ax2d.set_ylabel(r'$\xi_T$',**tnrfont)
-        ax2d.set_xlim(0,maxnormf+0.1)
+        ax2d.set_xlim(0,maxnormf)
         ax2d.set_ylim(0,1)
         fig2d.savefig('../freq_xiT_growth_peaks_labelled.png',bbox_inches='tight')
     if plot_hm:
@@ -654,7 +620,7 @@ if __name__ == '__main__':
     """
     homeloc = homes.get('lowkperp_T')
 
-    # sollocs = getsollocs(homeloc)
+    sollocs = getsollocs(homeloc)
     # for i in range(len(sollocs)):
     #     os.chdir(sollocs[i])
     #     w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[i])
@@ -674,8 +640,9 @@ if __name__ == '__main__':
         XI2.append(float(sol.split('run')[1].split('_')[2]))
     XI2 = np.array(XI2)
     # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
-    ld.plot_all(sollocs=sollocs,labels=XI2,name='maxvdop_xiT',plot_angles=True,xlabel=r'$\xi_T$') # [str(i*100)+'%' for i in XI2])
+    # ld.plot_all(sollocs=sollocs,labels=XI2,name='maxvdop_xiT',plot_angles=True,xlabel=r'$\xi_T$') # [str(i*100)+'%' for i in XI2])
     # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
+    get_peak_freqs(sollocs=sollocs,loop=XI2,maxnormf=18,fbins=1000,plot_2D=True)
     sys.exit()
 
     # # D runs
