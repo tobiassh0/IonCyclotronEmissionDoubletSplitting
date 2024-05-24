@@ -4,11 +4,11 @@ def xoutside_ticks(lax):
 	for ax in lax:
 		ax.tick_params(axis='x',direction='out',top=False,right=False,left=False,bottom=True)
 
-def Fig1_freqgrowth_freqkpara(w,dw,kpara,maxnormf=15,norm=[None,None],clims=(-1.5,1.5),cmap='hot',bins=(1000,1000),name=''):
+def Fig1_freqgrowth_freqkpara(w,dw,kpara,maxnormf=15,norm=[None,None],clims=(-2.0,2.0),cmap='hot',bins=(1000,1000),name=''):
     thresh = (w/norm[0] < maxnormf) & (dw/norm[0] > 0)
 
     # setup figure & plot
-    fig,axs=plt.subplots(figsize=(9,7),nrows=2,ncols=1,sharex=True)
+    fig,axs=plt.subplots(figsize=(9,5),nrows=2,ncols=1,sharex=True)
     fig.subplots_adjust(hspace=0.1)
     # plot freq v growth with kpara cmap
     sc = axs[0].scatter(w[thresh]/norm[0],dw[thresh]/norm[0],c=kpara[thresh]/norm[1],edgecolor='none',vmin=clims[0],vmax=clims[1],cmap=cmap)
@@ -29,6 +29,7 @@ def Fig1_freqgrowth_freqkpara(w,dw,kpara,maxnormf=15,norm=[None,None],clims=(-1.
     axs[0].set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont)
     axs[1].set_xlabel('Frequency '+' '+r'$[\Omega_i]$',**tnrfont)
     axs[1].set_ylabel(r'$k_\parallel V_A/\Omega_i$',**tnrfont)
+    axs[1].set_ylim(clims[0],clims[1])
     axs[0].set_xlim(0,maxnormf)
     axs[0].set_ylim(0,0.15)
     xoutside_ticks(axs)
@@ -239,11 +240,12 @@ if __name__=='__main__':
     zoomed_sollocs_noT = [sollocs_noT[4],sollocs_noT[12],sollocs_noT[20],sollocs_noT[28]]# 10, 30, 50, 70
     zoomed_sollocs = [zoomed_sollocs_T,zoomed_sollocs_noT]
 
-    # # Fig1
-    # index = 0 # index of sollocs (and hence xi2) to choose
-    # data=read_all_data(loc=sollocs_T[index])
-    # w0,k0,w,dw,kpara,kperp = data
-    # Fig1_freqgrowth_freqkpara(w,dw,kpara,norm=[w0,k0],name='xiT_{}'.format(xi2_T[index]))
+    # Fig1
+    index = 0 # index of sollocs (and hence xi2) to choose
+    data=read_all_data(loc=sollocs_T[index])
+    w0,k0,w,dw,kpara,kperp = data
+    Fig1_freqgrowth_freqkpara(w,dw,kpara,norm=[w0,k0],name='xiT_{}'.format(xi2_T[index]))
+    sys.exit()
 
     # Fig2
     name = ['withT','noT']
