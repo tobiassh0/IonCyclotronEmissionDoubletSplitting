@@ -458,13 +458,13 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
     return None
 
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
-def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
+def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,Nperw=10,**kwargs):
     plot_2D=kwargs.get('plot_2D')
     plot_3D=kwargs.get('plot_3D')
     plot_hm=kwargs.get('plot_hm')
-    if sum(filter(None,[plot_2D,plot_3D,plot_hm])) > 1 or sum(filter(None,[plot_2D,plot_3D,plot_hm])) < 1:
-        print('# ERROR # :: defaulting to heatmap')
-        plot_hm=True ; plot_2D=False ; plot_3D=False
+    # if sum(filter(None,[plot_2D,plot_3D,plot_hm])) > 1 or sum(filter(None,[plot_2D,plot_3D,plot_hm])) < 1:
+    #     print('# ERROR # :: defaulting to heatmap')
+    #     plot_hm=True ; plot_2D=False ; plot_3D=False
     
     if plot_2D:
         # 2d colormap
@@ -490,7 +490,7 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
         w0,k0,w,dw,kpara,kperp = data
         xarr, zarr = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
         # 2D plot
-        peaks = extractPeaks(zarr,Nperw=8,plateau_size=0.5)
+        peaks = extractPeaks(zarr,Nperw=Nperw,plateau_size=plateau_size)
         x.append(xarr[peaks]/w0)
         y.append([loop[i]]*len(peaks))# xi2 concentration constant
         z.append(zarr[peaks]/w0)
@@ -516,33 +516,33 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=1000,**kwargs):
             ax2d.axvline(i,color='darkgrey',linestyle='--')
         # plot freqs vs. xi2 and gamma as color
         for i in range(len(z)):
-            im = ax2d.scatter(x[i],y[i],c=z[i],marker='s',s=25,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
+            im2d = ax2d.scatter(x[i],y[i],c=z[i],marker='s',s=25,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
         # plot two trend lines
         ax2d.plot([9.5,10],[1,0],linestyle='--',color='k',alpha=0.75)
         ax2d.annotate('A',xy=(9.3,0.8),xycoords='data')
         ax2d.plot([4.5,10],[1.05,0],linestyle='--',color='k',alpha=0.75)
         ax2d.annotate('B',xy=(6,0.6),xycoords='data')
         # colorbar, labelling and other formatting
-        cbar = plt.colorbar(im)
-        cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
+        cbar2d = fig2d.colorbar(im2d)
+        cbar2d.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         ax2d.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         ax2d.set_ylabel(r'$\xi_T$',**tnrfont)
         ax2d.set_xlim(0,maxnormf)
         ax2d.set_ylim(0,1)
-        fig2d.savefig('../freq_xiT_growth_peaks_labelled.png',bbox_inches='tight')
+        fig2d.savefig('../freq_xiT_growth_peaks_Nperw_{}.png'.format(Nperw),bbox_inches='tight')
     if plot_hm:
         # plot integer deuteron harmonics
         for i in range(0,maxnormf+1,1):
             axhm.axvline(i,color='darkgrey',linestyle='--')
-        im = axhm.imshow(growth_hm,origin='lower',aspect='auto',extent=[0,maxnormf,0,1],cmap='summer',interpolation='none',clim=(0,0.15))
+        imhm = axhm.imshow(growth_hm,origin='lower',aspect='auto',extent=[0,maxnormf,0,1],cmap='summer',interpolation='gaussian',clim=(0,0.15))
         # cbar = fig.colorbar(im, orientation='vertical', pad=0.1)
-        cbar=plt.colorbar(im)
-        cbar.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
+        cbarhm = fighm.colorbar(imhm)
+        cbarhm.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         # for i in range(len(x)):
             # im = axhm.scatter(x[i],y[i],facecolor='none',marker='s',s=12,edgecolor='k',alpha=0.5)
         axhm.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         axhm.set_ylabel(r'$\xi_T$',**tnrfont)
-        fighm.savefig('../freq_xiT_growth_all.png',bbox_inches='tight')
+        fighm.savefig('../freq_xiT_growth_feathered.png',bbox_inches='tight')
         # plt.show()
     plt.clf()
     return None
@@ -636,13 +636,16 @@ if __name__ == '__main__':
     # XI2 = np.sort(XI2)
     sollocs = getsollocs(homeloc)
     XI2 = []
-    for sol in sollocs: # missing 11% in XI2 array
+    for sol in sollocs: # all runs (not in order) use list comprehension for ordered and specific XI2  
         XI2.append(float(sol.split('run')[1].split('_')[2]))
     XI2 = np.array(XI2)
     # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
     # ld.plot_all(sollocs=sollocs,labels=XI2,name='maxvdop_xiT',plot_angles=True,xlabel=r'$\xi_T$') # [str(i*100)+'%' for i in XI2])
     # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
-    get_peak_freqs(sollocs=sollocs,loop=XI2,maxnormf=18,fbins=1000,plot_2D=True)
+    # # plot peak frequencies # if plot heatmap then only use xi2=5, 10, 15...95 
+    # XI2 = [i/100 for i in range(0,100,5)]
+    # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/'.format(i) for i in XI2]
+    get_peak_freqs(sollocs=sollocs,loop=XI2,maxnormf=18,plot_2D=True)#,plot_hm=True 
     sys.exit()
 
     # # D runs

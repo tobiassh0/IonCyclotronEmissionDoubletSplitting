@@ -36,7 +36,7 @@ def Fig1_freqgrowth_freqkpara(w,dw,kpara,maxnormf=15,norm=[None,None],clims=(-2.
     fig.savefig('PRL_Fig1_freq_kpara_'+name+'.png',bbox_inches='tight')
     return None
 
-def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name=''):
+def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='',clims=(-2,2)):
     """
         In:
             sollocs : list of runs to loop over (should include all sollocs for main plot)
@@ -85,7 +85,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='')
             ax_zoomed[c].annotate(r'$\xi_T=$'+str(xiT[i]),xy=(1,0.1),xycoords='data',color='k',fontsize=14,ha='left',va='bottom')
             # plot in separate axes
             thresh = (w/w0 < maxnormf) & (dw/w0 > 0)
-            sc = ax_zoomed[c].scatter(w[thresh]/w0,dw[thresh]/w0,c=kpara[thresh]/k0,edgecolor='none',cmap='hot',clim=(-2,2)) # clim=(-2*k0,2*k0)
+            sc = ax_zoomed[c].scatter(w[thresh]/w0,dw[thresh]/w0,c=kpara[thresh]/k0,edgecolor='none',cmap='hot',clim=clims) #clim=(-2*k0,2*k0)
             # # testing
             # sc = ax_zoomed[c].scatter([0,1],[0,1],c=[-2*k0,2*k0],cmap='hot',clim=(-2*k0,2*k0))
             c+=1
@@ -240,20 +240,20 @@ if __name__=='__main__':
     zoomed_sollocs_noT = [sollocs_noT[4],sollocs_noT[12],sollocs_noT[20],sollocs_noT[28]]# 10, 30, 50, 70
     zoomed_sollocs = [zoomed_sollocs_T,zoomed_sollocs_noT]
 
-    # Fig1
-    index = 0 # index of sollocs (and hence xi2) to choose
-    data=read_all_data(loc=sollocs_T[index])
-    w0,k0,w,dw,kpara,kperp = data
-    Fig1_freqgrowth_freqkpara(w,dw,kpara,norm=[w0,k0],name='xiT_{}'.format(xi2_T[index]))
-    sys.exit()
+    # # Fig1
+    # index = 0 # index of sollocs (and hence xi2) to choose
+    # data=read_all_data(loc=sollocs_T[index])
+    # w0,k0,w,dw,kpara,kperp = data
+    # Fig1_freqgrowth_freqkpara(w,dw,kpara,norm=[w0,k0],name='xiT_{}'.format(xi2_T[index]))
+    # sys.exit()
 
     # Fig2
     name = ['withT','noT']
     for i in range(0,2):
         Fig2_peakfreq_freqextraction(sollocs[i],zoomed_sollocs[i],xi2[i],name=name[i])
-
     sys.exit()
 
     # Fig3
     Fig3_diffgrowthrates_D_DT_contour(zoomed_sollocs[0],zoomed_sollocs[1],xi2_T=[0.1,0.3,0.5,0.7],\
                                         smooth_cont=True,name='smooth')
+    sys.exit()
