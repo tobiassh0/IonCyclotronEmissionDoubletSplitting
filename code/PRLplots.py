@@ -85,7 +85,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='',
             ax_zoomed[c].annotate(r'$\xi_T=$'+str(xiT[i]),xy=(1,0.1),xycoords='data',color='k',fontsize=14,ha='left',va='bottom')
             # plot in separate axes
             thresh = (w/w0 < maxnormf) & (dw/w0 > 0)
-            sc = ax_zoomed[c].scatter(w[thresh]/w0,dw[thresh]/w0,c=kpara[thresh]/k0,edgecolor='none',cmap='hot',clim=clims) #clim=(-2*k0,2*k0)
+            sc = ax_zoomed[c].scatter(w[thresh]/w0,dw[thresh]/w0,c=kpara[thresh]/k0,edgecolor='none',cmap='hot',vmin=clims[0],vmax=clims[1]) #clim=(-2*k0,2*k0)
             # # testing
             # sc = ax_zoomed[c].scatter([0,1],[0,1],c=[-2*k0,2*k0],cmap='hot',clim=(-2*k0,2*k0))
             c+=1
