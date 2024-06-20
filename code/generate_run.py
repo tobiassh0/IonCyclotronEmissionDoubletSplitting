@@ -17,7 +17,7 @@ mc = {
 }
 
 
-def loop_generate(**kwargs): # filename, btext, narr, Barr, Eminarr):
+def loop_generate(species,**kwargs): # filename, btext, narr, Barr, Eminarr):
 	fname = kwargs.get('filename')
 	btext = kwargs.get('_btext')
 	Barr = kwargs.get('_Barr')
@@ -32,10 +32,10 @@ def loop_generate(**kwargs): # filename, btext, narr, Barr, Eminarr):
 	pitcharr = kwargs.get('_pitcharr')
 	print(Eminarr,pitcharr)
 
-	# singular loops 
-	m1, Z1 = mc.get('Deuterons')
-	m2, Z2 = mc.get('Tritons')
-	m3, Z3 = mc.get('Alphas')
+	# singular loops
+	m1, Z1 = mc.get(species[0])
+	m2, Z2 = mc.get(species[1])
+	m3, Z3 = mc.get(species[2])
 
 	# # over concentration
 	# with open(fname+'.txt','a') as file:
@@ -83,12 +83,20 @@ if __name__=='__main__':
 
 	# D-T (JET like)
 	name  = 'DT_JET_Energy'
-	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --secondfuelionconcentrationratio 0.11 '
+	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --secondfuelionconcentrationratio 0.25 --minorityenergyMeV 14.68 --pitch 0.9893994377513348 '
 	majspec = 'Deuterons'
 	maj2spec = 'Tritons'
 	minspec = 'Alphas'
 	# Emin = 3.5 # MeV
 
+	# D-He3
+	m1, Z1 = mc.get('Deuterons')
+	m2, Z2 = mc.get('He3')
+	m3, Z3 = mc.get('Protons')
+	with open('D_He3_test.txt','a') as file:
+		file.write(btext+'\n')
+	sys.exit()
+	
 	# --- #
 
 	# get mass and charge
@@ -117,7 +125,7 @@ if __name__=='__main__':
 	vpara = (v0**2 - (vperp_vA*vA)**2)**0.5
 	pitchcosine = vpara/v0
 	print(energies_MeV,pitchcosine)
-	loop_generate(filename=name,_btext=btext,_Eminarr=energies_MeV,_pitcharr=pitchcosine)
+	loop_generate(species=[majspec,maj2spec,minspec],filename=name,_btext=btext,_Eminarr=energies_MeV,_pitcharr=pitchcosine)
 
 	# # thermal spread and percentage
 	# th_spread_beam = ' 0.01'   # with spacing before

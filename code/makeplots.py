@@ -169,7 +169,7 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(1000,10
         for k in range(len(rowval)):
             i = np.where(rowval[k] >= rowarr)[0][-1] # last index corresponding to row
             j = np.where(colval[k] >= colarr)[0][-1] # last index corresponding to column
-            if Z[i,j] < val[k]:
+            if Z[i,j] < val[k]: # change to abs(val[k]) and will aid in extracting kpara in 2d map
                 Z[i,j]=val[k] # assign highest growth rate
         
         # boolean if wanting to pkl Z and (ext)ents
@@ -500,6 +500,7 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
         # ax.plot(farr/w0,l*np.ones(len(farr)),growth/w0,color='k')
     
     if plot_3D:
+        # plot 3d map of peak growth rates (messy)
         z = np.array(z)
         Z = z.reshape(X.shape)
         ax3d.plot_surface(X,Y,Z,cmap=cm.summer,vmin=0,vmax=0.15,antialiased=True)
@@ -510,6 +511,7 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
             print(az)
             ax3d.view_init(elev=30,azim=az)
             fig3d.savefig('../az_%d.png' % az)
+        # plt.show()
     if plot_2D:
         # plot integer deuteron harmonics
         for i in range(0,maxnormf+1,1):
@@ -529,7 +531,8 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
         ax2d.set_ylabel(r'$\xi_T$',**tnrfont)
         ax2d.set_xlim(0,maxnormf)
         ax2d.set_ylim(0,1)
-        fig2d.savefig('../freq_xiT_growth_peaks_Nperw_{}.png'.format(Nperw),bbox_inches='tight')
+        # fig2d.savefig('../freq_xiT_growth_peaks_Nperw_{}.png'.format(Nperw),bbox_inches='tight')
+        plt.show()
     if plot_hm:
         # plot integer deuteron harmonics
         for i in range(0,maxnormf+1,1):
@@ -612,15 +615,17 @@ if __name__ == '__main__':
     :: examples  :: 
         # one file
     LOC_FILE = homes.get(NAME) # if using dict
+    LOC_FILE = '/name/of/dir/to/solutions/file/here'
     data=read_all_data(loc=LOC_FILE)
     make_all_plots(alldata=data)
 
         # multiple files
     para_calc(LOC_FILE,plot=True)
     """
-    homeloc = homes.get('lowkperp_T')
 
+    homeloc = homes.get('lowkperp_T')
     sollocs = getsollocs(homeloc)
+
     # for i in range(len(sollocs)):
     #     os.chdir(sollocs[i])
     #     w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[i])
