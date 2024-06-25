@@ -401,11 +401,12 @@ def plot_frq_growth(w,dw,kpara,maxnormf=None,norm=[None,None],clims=(-1.5,1.5),l
     return None
 
 # plot freq vs. growth for a given (range of) angle(s)
-def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,colorarr=None):
+def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,labels=None,colorarr=None):
     Ny, Nx = Z.shape
     # lsize = np.sqrt(Nx**2+Ny**2) # maximum length of array
     if angles == None:
         angles = np.array([-80,-85,-90,-95,-100])
+        labels = np.array([r'$80^\circ$',r'$85^\circ$',r'$90^\circ$',r'$95^\circ$',r'$100^\circ$'])
 
     # color array
     if colorarr != None:
@@ -442,7 +443,7 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
         # combined line plot
         ax_line[j].set_ylim(0,0.1) # no negative growths
         ax_line[j].locator_params(axis='y',nbins=5)
-        ax_line[j].annotate(angles[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
+        ax_line[j].annotate(labels[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
         ax_line[j].plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color=colors[j])
         # single plot
         ax_single.plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color='k')
@@ -624,14 +625,14 @@ if __name__ == '__main__':
     """
 
     homeloc = homes.get('lowkperp_T')
-    sollocs = getsollocs(homeloc)
+    sollocs = [getsollocs(homeloc)[3]]
 
-    # for i in range(len(sollocs)):
-    #     os.chdir(sollocs[i])
-    #     w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[i])
-    #     Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
-    #     plot_frq_growth_angles(Z,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
-    # sys.exit()
+    for i in range(len(sollocs)):
+        os.chdir(sollocs[i])
+        w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[i])
+        Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
+        plot_frq_growth_angles(Z,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
+    sys.exit()
 
     # DT runs
     # XI2 = [i/200 for i in range(0,200,5)]
