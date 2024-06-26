@@ -109,6 +109,7 @@ addprocs(nprocsadded, exeflags="--project")
   const mT = 5497.93
   const mHe3 = 5497.885
   const mα = 7294.3
+  const mB11 = 19707.25
 
   # electron mass and charge
   mₑ = LinearMaxwellVlasov.mₑ
@@ -126,15 +127,25 @@ addprocs(nprocsadded, exeflags="--project")
 #  z2 = 1
 #  zmin = 2
 
-  # D-He3-p
+#  # D-He3-p
+#  # masses
+#  m1 = md*mₑ
+#  m2 = mHe3*mₑ
+#  mmin = mp*mₑ
+#  # charge numbers
+#  z1 = 1
+#  z2 = 2
+#  zmin = 1
+
+  # p-B11-α
   # masses
-  m1 = md*mₑ
-  m2 = mHe3*mₑ
-  mmin = mp*mₑ
+  m1 = mp*mₑ
+  m2 = mB11*mₑ
+  mmin = mα*mₑ
   # charge numbers
   z1 = 1
-  z2 = 2
-  zmin = 1
+  z2 = 5
+  zmin = 2
 
   # concentrations and densities
   # Fig 18 Cottrell 1993

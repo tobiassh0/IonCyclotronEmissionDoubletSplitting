@@ -419,17 +419,21 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
     wmin, wmax = (collim/norm[0])
     kparamin, kparamax = (rowlim/norm[1])
     extents = [wmin,wmax,kparamin,kparamax]
-
+    # collection of growths for given range of angles
     fig_line,ax_line=plt.subplots(figsize=(4,int(1.5*len(angles))),nrows=len(angles),sharex=True)
+    # heatmap of kpara vs freq
+    fig_hm,ax_hm=plt.subplots(figsize=(8,int(1.5*len(angles))))
+    ax_hm.imshow(Z/norm[0],**imkwargs,cmap='summer',clim=(0,0.15),extent=[collim[0]/norm[0],collim[1]/norm[0],rowlim[0]/norm[1],rowlim[1]/norm[1]])
     ax_line[0].set_xlim(wmin,wmax)
+    # centre of lines
     Xn = 0 # starts at 0
-    Yn = Ny/2 # centred on kpara = 0
+    Yn = Ny/2 # centred on kpara = 0, symmetric about axes
     # loop through angles
     for j in range(len(angles)):
         fig_single,ax_single = plt.subplots(figsize=(8,6))
         # find intersection points between line and box (pixel coords)
         Ystart = Ny ; Yend = 0
-        xlim, ylim = ld.LineBoxIntersection(Ystart,Yend,Xn,Yn,Nx,Ny,angles[j])
+        xlim, ylim = ld.LineBoxIntersection(Ystart,Yend,Xn,Yn,Nx,Ny,abs(angles[j])*np.pi/180)
         # find data points along line
         lsize = np.sqrt((xlim[-1]-xlim[0])**2 + (ylim[-1]-ylim[0])**2)
         x = np.linspace(xlim[0],xlim[1],int(lsize))
@@ -438,13 +442,23 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
         # convert all to real coordinates
         xlim = (collim[0]/norm[0])+xlim*((collim[1]-collim[0])/norm[0])/Nx
         ylim = (rowlim[0]/norm[1])+ylim*((rowlim[1]-rowlim[0])/norm[1])/Ny
-        # # summate all points # "growth per (dkpara,dw) cell"
-        # intensity[i,j] = np.sum(zi[j,:])/len(zi[j,:]) # normalise to number of cells along line
+        """
+        # summate all points # "growth per (dkpara,dw) cell"
+        intensity[i,j] = np.sum(zi[j,:])/len(zi[j,:]) # normalise to number of cells along line
+         """
         # combined line plot
         ax_line[j].set_ylim(0,0.1) # no negative growths
         ax_line[j].locator_params(axis='y',nbins=5)
         ax_line[j].annotate(labels[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
         ax_line[j].plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color=colors[j])
+        # plot lines on heatmap
+        ax_hm.plot(xlim,ylim,'k--')
+        # annotate angular lines
+        print(angles[j],ylim)
+        if ylim[-1] != 0:
+            ax_hm.annotate(labels[j],xy=(15,ylim[-1]-0.01),xycoords='data',va='top',ha='right')
+        else:
+            ax_hm.annotate(labels[j],xy=(15,ylim[0]+0.01),xycoords='data',va='bottom',ha='right')
         # single plot
         ax_single.plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color='k')
         ax_single.set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
@@ -453,6 +467,10 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
         ax_single.set_ylim(0,0.15)
         fig_single.savefig(os.getcwd()+'/freq_growth_{:.1f}.png'.format(angles[j]),bbox_inches='tight')
 
+    ax_hm.set_xlabel(r'$\omega/\Omega_i$',**tnrfont)
+    ax_hm.set_ylabel(r'$k_\parallel v_A/\Omega_i$',**tnrfont)
+    ax_hm.set_ylim(-2,2) ; ax_hm.set_xlim(0,15)
+    fig_hm.savefig(os.getcwd()+'/freq_kpara_angle_lines.png',bbox_inches='tight')
     ax_line[-1].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
     fig_line.supylabel('Growth rate '+r'$[\Omega_i]$',**tnrfont,x=-0.1)
     fig_line.savefig(os.getcwd()+'/freq_growth_angles_combi.png',bbox_inches='tight')
