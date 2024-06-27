@@ -401,13 +401,13 @@ def plot_frq_growth(w,dw,kpara,maxnormf=None,norm=[None,None],clims=(-1.5,1.5),l
     return None
 
 # plot freq vs. growth for a given (range of) angle(s)
-def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,labels=None,colorarr=None):
+def plot_frq_growth_angles(kpara,w,dw,rowlim=(None,None),collim=(None,None),norm=[1,1],angles=None,anglabels=None,colorarr=None):
+    Z = make2D(kpara,w,dw,rowlim=np.array(rowlim),collim=np.array(collim))  
     Ny, Nx = Z.shape
     # lsize = np.sqrt(Nx**2+Ny**2) # maximum length of array
     if angles == None:
         angles = np.array([-80,-85,-90,-95,-100])
-        labels = np.array([r'$80^\circ$',r'$85^\circ$',r'$90^\circ$',r'$95^\circ$',r'$100^\circ$'])
-
+        anglabels = np.array([r'$80^\circ$',r'$85^\circ$',r'$90^\circ$',r'$95^\circ$',r'$100^\circ$'])
     # color array
     if colorarr != None:
         colors = plt.cm.rainbow(np.linspace(0,1,len(angles)))
@@ -422,7 +422,7 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
     # collection of growths for given range of angles
     fig_line,ax_line=plt.subplots(figsize=(4,int(1.5*len(angles))),nrows=len(angles),sharex=True)
     # heatmap of kpara vs freq
-    fig_hm,ax_hm=plt.subplots(figsize=(8,int(1.5*len(angles))))
+    fig_hm,ax_hm=plt.subplots(figsize=(10,5))
     ax_hm.imshow(Z/norm[0],**imkwargs,cmap='summer',clim=(0,0.15),extent=[collim[0]/norm[0],collim[1]/norm[0],rowlim[0]/norm[1],rowlim[1]/norm[1]])
     ax_line[0].set_xlim(wmin,wmax)
     # centre of lines
@@ -449,31 +449,31 @@ def plot_frq_growth_angles(Z,rowlim=[-4,4],collim=[0,15],norm=[1,1],angles=None,
         # combined line plot
         ax_line[j].set_ylim(0,0.1) # no negative growths
         ax_line[j].locator_params(axis='y',nbins=5)
-        ax_line[j].annotate(labels[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
+        ax_line[j].annotate(anglabels[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
         ax_line[j].plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color=colors[j])
         # plot lines on heatmap
         ax_hm.plot(xlim,ylim,'k--')
         # annotate angular lines
         print(angles[j],ylim)
         if ylim[-1] != 0:
-            ax_hm.annotate(labels[j],xy=(15,ylim[-1]-0.01),xycoords='data',va='top',ha='right')
+            ax_hm.annotate(anglabels[j],xy=(15,ylim[-1]-0.01),xycoords='data',va='top',ha='right')
         else:
-            ax_hm.annotate(labels[j],xy=(15,ylim[0]+0.01),xycoords='data',va='bottom',ha='right')
+            ax_hm.annotate(anglabels[j],xy=(15,ylim[0]+0.01),xycoords='data',va='bottom',ha='right')
         # single plot
         ax_single.plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color='k')
         ax_single.set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
         ax_single.set_ylabel('Growth rate '+r'$[\Omega_i]$',**tnrfont)
         ax_single.set_xlim(wmin,wmax)
         ax_single.set_ylim(0,0.15)
-        fig_single.savefig(os.getcwd()+'/freq_growth_{:.1f}.png'.format(angles[j]),bbox_inches='tight')
+        fig_single.savefig('freq_growth_{:.1f}.png'.format(angles[j]),bbox_inches='tight')
 
-    ax_hm.set_xlabel(r'$\omega/\Omega_i$',**tnrfont)
-    ax_hm.set_ylabel(r'$k_\parallel v_A/\Omega_i$',**tnrfont)
+    ax_hm.set_xlabel('Frequency'+ '  '+r'$[\Omega_i]$',**tnrfont)
+    ax_hm.set_ylabel('Parallel Wavenumber'+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
     ax_hm.set_ylim(-2,2) ; ax_hm.set_xlim(0,15)
-    fig_hm.savefig(os.getcwd()+'/freq_kpara_angle_lines.png',bbox_inches='tight')
+    fig_hm.savefig('freq_kpara_angle_lines.png',bbox_inches='tight')
     ax_line[-1].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
     fig_line.supylabel('Growth rate '+r'$[\Omega_i]$',**tnrfont,x=-0.1)
-    fig_line.savefig(os.getcwd()+'/freq_growth_angles_combi.png',bbox_inches='tight')
+    fig_line.savefig('freq_growth_angles_combi.png',bbox_inches='tight')
     return None
 
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
@@ -581,13 +581,12 @@ def make_all_plots(alldata=None,cmap='summer'):
     l3 = "Frequency"+ "  "+r"$[\Omega_i]$"                      # r'$\omega/\Omega_i$'
     l4 = "Growth Rate"+ "  "+r"$[\Omega_i]$"                    # r'$\gamma/\Omega_i$'
     # plotting scripts
-    # plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False,\
-    #                 rowlim=(-maxnormkpara,maxnormkpara),collim=(0,maxnormkperp),maxnormf=maxnormkperp,dump=False) # load
-    # plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,norm=[w0,k0],labels=[l3,l4])
-    plot_frq_growth_angles(kpara,kperp,w,dw,maxnormf=maxnormkperp,norm=[w0,k0],angles=[88.,88.5,89.,89.5,90.],labels=[l3,l4],\
-                    clims=[0,0.5],percentage=0.0005)
-    # plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
-    # plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
+    plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False,\
+                    rowlim=(-maxnormkpara,maxnormkpara),collim=(0,maxnormkperp),maxnormf=maxnormkperp,dump=False) # load
+    plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,norm=[w0,k0],labels=[l3,l4])
+    plot_frq_growth_angles(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
+    plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
+    plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
 
 # parallel transferral of multiple runs data from HDF5 to pkl
@@ -642,6 +641,12 @@ if __name__ == '__main__':
     para_calc(LOC_FILE,plot=True)
     """
 
+    # home = '/home/space/phrmsf/Documents/ICE_DS/run_5.18_0.06653_0.5821229701572894_0.01_0.01_15.0_5.5__25.0_4.0_1.0e20_0.00015_1024/'
+    # data=read_all_data(home)
+    # os.chdir(home)
+    # make_all_plots(data)
+    # sys.exit()
+
     homeloc = homes.get('lowkperp_T')
     sollocs = [getsollocs(homeloc)[3]]
 
@@ -649,7 +654,7 @@ if __name__ == '__main__':
         os.chdir(sollocs[i])
         w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[i])
         Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
-        plot_frq_growth_angles(Z,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
+        plot_frq_growth_angles(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
     sys.exit()
 
     # DT runs
