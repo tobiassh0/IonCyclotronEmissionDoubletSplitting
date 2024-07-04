@@ -13,6 +13,7 @@ mc = {
 	'Helium3':[5497.885*me, 2],
 	'He3':[5497.885*me, 2],
 	'Protons':[1836.2*me, 1],
+	'B11':[19707.25*me, 5],
 	'Alphas':[7294.3*me, 2],
 }
 
@@ -37,19 +38,19 @@ def loop_generate(species,**kwargs): # filename, btext, narr, Barr, Eminarr):
 	m2, Z2 = mc.get(species[1])
 	m3, Z3 = mc.get(species[2])
 
-	# # over concentration
-	# with open(fname+'.txt','a') as file:
-	# 	for xi2 in xi2arr:
-	# 		print(xi2)
-	# 		xi1 = (1/Z1)*(1-Z2*xi2-Z3*xi3) # varies
-	# 		xi1prime = (1/Z1)*(1-xi3*Z3) # const
-	# 		upper = m2-(Z2/Z1)*m1
-	# 		lower = (m1/Z1)+xi3*(m3-(Z3/Z1)*m1)
-	# 		neprime = n0*(1+xi2*(upper/lower))
-	# 		# VA_T = B0/np.sqrt(mu0*n0*(xi1*m1+xi2*m2+xi3*m3))
-	# 		# VA_noT = B0/np.sqrt(mu0*neprime*(xi1prime*m1+xi3*m3))
-	# 		file.write(btext+'--electronDensity '+str(neprime)+' --nameextension '+str(np.around(xi2,3))+'\n')
-	# 		# file.write(btext+'--secondfuelionconcentrationratio'+' '+str(xi2)+'\n') # +' --nameextension '+str(np.around(Emin,2))+'MeV'+'\n'
+	# over concentration and pitch
+	with open(fname+'.txt','a') as file:
+		for i in range(len(xi2arr)):
+			print(xi2arr[i],pitcharr[i])
+			# xi1 = (1/Z1)*(1-Z2*xi2-Z3*xi3) # varies
+			# xi1prime = (1/Z1)*(1-xi3*Z3) # const
+			# upper = m2-(Z2/Z1)*m1
+			# lower = (m1/Z1)+xi3*(m3-(Z3/Z1)*m1)
+			# neprime = n0*(1+xi2*(upper/lower))
+			# # VA_T = B0/np.sqrt(mu0*n0*(xi1*m1+xi2*m2+xi3*m3))
+			# # VA_noT = B0/np.sqrt(mu0*neprime*(xi1prime*m1+xi3*m3))
+			# file.write(btext+'--electronDensity '+str(neprime)+' --nameextension '+str(np.around(xi2,3))+'\n')
+			file.write(btext+'--pitch '+str(pitcharr[i])+' --secondfuelionconcentrationratio '+str(xi2arr[i])+'\n') # +' --nameextension '+str(np.around(Emin,2))+'MeV'+'\n'
 
 	# over energy and pitch
 	with open(fname+'.txt','a') as file:
@@ -81,34 +82,48 @@ if __name__=='__main__':
 	# minspec = 'Protons'
 	# Emin = 14.68 # MeV
 
-	# D-T (JET like)
-	name  = 'DT_JET_Energy'
-	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --secondfuelionconcentrationratio 0.25 --minorityenergyMeV 14.68 --pitch 0.9893994377513348 '
-	majspec = 'Deuterons'
-	maj2spec = 'Tritons'
-	minspec = 'Alphas'
-	# Emin = 3.5 # MeV
+	# # D-T (JET like)
+	# name  = 'DT_JET_Energy'
+	# btext = '../julia-1.9.3/bin/julia --proj LMV.jl --secondfuelionconcentrationratio 0.25 --minorityenergyMeV 14.68 --pitch 0.9893994377513348 '
+	# majspec = 'Deuterons'
+	# maj2spec = 'Tritons'
+	# minspec = 'Alphas'
+	# # Emin = 3.5 # MeV
 
-	# D-He3
-	m1, Z1 = mc.get('Deuterons')
-	m2, Z2 = mc.get('He3')
-	m3, Z3 = mc.get('Protons')
-	with open('D_He3_test.txt','a') as file:
-		file.write(btext+'\n')
-	sys.exit()
+	# # D-He3
+	# m1, Z1 = mc.get('Deuterons')
+	# m2, Z2 = mc.get('He3')
+	# m3, Z3 = mc.get('Protons')
+	# with open('D_He3_test.txt','a') as file:
+	# 	file.write(btext+'\n')
+	# sys.exit()
 	
+	# p-B11
+	name = 'p_B11'
+	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --minorityenergyMeV 5.5 --magneticField 5.18 --temperaturekeV 25 --electronDensity 1e20 '
+	majspec = 'Protons'
+	maj2spec = 'B11'
+	minspec = 'Alphas'
 	# --- #
+
 
 	# get mass and charge
 	m1, Z1 = mc.get(majspec)
 	m2, Z2 = mc.get(maj2spec)
 	m3, Z3 = mc.get(minspec)
 
-	# # loop over tritium concentration for fixed electron number density
-	# xi2arr = np.array([i/200 for i in range(0,200,5)])# if (i/2)%5!=0])
-	# # xi2arr = np.arange(0,1.,0.025) # concentrations
-	# print(xi2arr)
-	# loop_generate(filename=name,_btext=btext,_xi2arr=xi2arr,_n0=1.7e19,_B0=2.07,_xi3=1.5e-4)
+	# loop over tritium concentration for fixed electron number density
+	umin = np.sqrt(2*5.5e6*qe/m3)
+	xi2arr = np.array([i for i in np.arange(0,0.2*(1-2*1.5e-4),0.01)])# if (i/2)%5!=0])
+	xi1arr = np.array([1-Z2*xi2arr[i]-Z3*1.5e-4 for i in range(len(xi2arr))])
+	vA = np.array([5.18/np.sqrt(mu0*1e20*(m1*xi1arr[i]+m2*xi2arr[i]+m3*1.5e-4)) for i in range(len(xi2arr))])
+	uperp_vA = 0.98
+	uperp = np.array([uperp_vA*vA[i] for i in range(len(vA))])
+	upara = np.array([np.sqrt(umin**2 - uperp[i]**2) for i in range(len(uperp))])
+	pitcharr = np.array([upara[i]/umin for i in range(len(upara))])
+	print(xi2arr)
+	loop_generate([majspec,maj2spec,minspec],filename=name,_btext=btext,_xi2arr=xi2arr,_n0=1e20,_B0=5.18,_xi3=1.5e-4,_pitcharr=pitcharr)
+	sys.exit()
 
 	# loop over minority energetic particle energy
 	energies_MeV = np.array([i/100 for i in range(100,2025,25)])

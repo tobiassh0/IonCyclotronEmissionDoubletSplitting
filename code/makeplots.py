@@ -86,6 +86,16 @@ def paraload_int(I):
 def getVa(w0,k0):
     return w0/k0
 
+# get frequency from kpara, kperp, Va and wci
+def getFreq(kpara,kperp,w0,k0):
+    Va = getVa(w0,k0)
+    Va2 = Va**2
+    kpara2 = kpara**2
+    ktot2 = kpara2 + kperp**2
+    omega2 = (Va2/2)*(ktot2 + kpara2 + (ktot2*kpara2*Va2/(w0**2)) + \
+                ((ktot2 + kpara2 + (ktot2*kpara2*Va2/(w0**2)))**2 - 4*ktot2*kpara2)**0.5)
+    return omega2**0.5
+
 # convert .jld to .pkl file type
 def jld_to_pkl(loc='',frac=1,parallel=False):
     f = h5py.File(loc+'solutions2D_.jld',"r")
@@ -385,7 +395,7 @@ def plot_frq_kperp(kperp,w,dw,maxk=None,maxnormf=None,norm=[None,None],cmap='sum
     return None
 
 # plot frequency vs growth rate (2d spectra)
-def plot_frq_growth(w,dw,kpara,maxnormf=None,norm=[None,None],clims=(-1.5,1.5),labels=['','']):
+def plot_frq_growth(w,dw,kpara,maxnormf=None,maxnormg=0.15,norm=[None,None],clims=(-1.5,1.5),labels=['','']):
     # setup figure & plot
     fig,ax=plt.subplots(figsize=(8,5))
     thresh = (w/norm[0] < maxnormf) & (dw/norm[0] > 0)
@@ -395,14 +405,14 @@ def plot_frq_growth(w,dw,kpara,maxnormf=None,norm=[None,None],clims=(-1.5,1.5),l
     ax.set_xlabel(labels[0],**tnrfont)
     ax.set_ylabel(labels[1],**tnrfont)
     ax.set_xlim(0,maxnormf)
-    ax.set_ylim(0,0.15)
+    ax.set_ylim(0,maxnormg)
     fig.savefig('freq_growth.png',bbox_inches='tight')
     print('plotted freq growth')
     return None
 
 # plot freq vs. growth for a given (range of) angle(s)
-def plot_frq_growth_angles(kpara,w,dw,rowlim=(None,None),collim=(None,None),norm=[1,1],angles=None,anglabels=None,colorarr=None):
-    Z = make2D(kpara,w,dw,rowlim=np.array(rowlim),collim=np.array(collim))  
+def plot_frq_growth_angles(kpara,kperp,dw,wmax=15,rowlim=(None,None),collim=(None,None),norm=[1,1],angles=None,anglabels=None,colorarr=None):
+    Z = make2D(kpara,kperp,dw,rowlim=np.array(rowlim),collim=np.array(collim))
     Ny, Nx = Z.shape
     # lsize = np.sqrt(Nx**2+Ny**2) # maximum length of array
     if angles == None:
@@ -416,15 +426,15 @@ def plot_frq_growth_angles(kpara,w,dw,rowlim=(None,None),collim=(None,None),norm
 
     # limits of box, normalised units
     rowlim = np.array(rowlim) ; collim = np.array(collim)
-    wmin, wmax = (collim/norm[0])
+    kperpmin, kperpmax = (collim/norm[1])
     kparamin, kparamax = (rowlim/norm[1])
-    extents = [wmin,wmax,kparamin,kparamax]
+    extents = [kperpmin,kperpmax,kparamin,kparamax]
     # collection of growths for given range of angles
     fig_line,ax_line=plt.subplots(figsize=(4,int(1.5*len(angles))),nrows=len(angles),sharex=True)
     # heatmap of kpara vs freq
     fig_hm,ax_hm=plt.subplots(figsize=(10,5))
-    ax_hm.imshow(Z/norm[0],**imkwargs,cmap='summer',clim=(0,0.15),extent=[collim[0]/norm[0],collim[1]/norm[0],rowlim[0]/norm[1],rowlim[1]/norm[1]])
-    ax_line[0].set_xlim(wmin,wmax)
+    ax_hm.imshow(Z/norm[0],**imkwargs,cmap='summer',clim=(0,0.15),extent=[collim[0]/norm[1],collim[1]/norm[1],rowlim[0]/norm[1],rowlim[1]/norm[1]])
+    ax_line[0].set_xlim(0,wmax)
     # centre of lines
     Xn = 0 # starts at 0
     Yn = Ny/2 # centred on kpara = 0, symmetric about axes
@@ -440,17 +450,22 @@ def plot_frq_growth_angles(kpara,w,dw,rowlim=(None,None),collim=(None,None),norm
         y = np.linspace(ylim[0],ylim[1],int(lsize))
         zi = scipy.ndimage.map_coordinates(Z/norm[0],np.vstack((y,x))) # normalised growth rates
         # convert all to real coordinates
-        xlim = (collim[0]/norm[0])+xlim*((collim[1]-collim[0])/norm[0])/Nx
+        xlim = (collim[0]/norm[1])+xlim*((collim[1]-collim[0])/norm[1])/Nx
         ylim = (rowlim[0]/norm[1])+ylim*((rowlim[1]-rowlim[0])/norm[1])/Ny
+        if xlim[-1]==0 and ylim[-1]==0:
+            zi = np.flip(zi) # opposite direction of line
         """
         # summate all points # "growth per (dkpara,dw) cell"
         intensity[i,j] = np.sum(zi[j,:])/len(zi[j,:]) # normalise to number of cells along line
          """
+        # freq from kpara, kperp
+        f_end = getFreq(np.max(np.abs(ylim))*norm[1],np.max(np.abs(xlim))*norm[1],norm[0],norm[1])
+        freqs = np.linspace(0,f_end/norm[0],len(zi))
         # combined line plot
         ax_line[j].set_ylim(0,0.1) # no negative growths
         ax_line[j].locator_params(axis='y',nbins=5)
         ax_line[j].annotate(anglabels[j],xy=(0.1,0.9),xycoords='axes fraction',va='top')
-        ax_line[j].plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color=colors[j])
+        ax_line[j].plot(freqs,zi,color=colors[j]) # np.linspace(xlim[0],xlim[1],len(zi))
         # plot lines on heatmap
         ax_hm.plot(xlim,ylim,'k--')
         # annotate angular lines
@@ -460,24 +475,24 @@ def plot_frq_growth_angles(kpara,w,dw,rowlim=(None,None),collim=(None,None),norm
         else:
             ax_hm.annotate(anglabels[j],xy=(15,ylim[0]+0.01),xycoords='data',va='bottom',ha='right')
         # single plot
-        ax_single.plot(np.linspace(xlim[0],xlim[1],len(zi)),zi,color='k')
+        ax_single.plot(freqs,zi,color='k') # np.linspace(xlim[0],xlim[1],len(zi))
         ax_single.set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
         ax_single.set_ylabel('Growth rate '+r'$[\Omega_i]$',**tnrfont)
-        ax_single.set_xlim(wmin,wmax)
+        ax_single.set_xlim(0,wmax)
         ax_single.set_ylim(0,0.15)
         fig_single.savefig('freq_growth_{:.1f}.png'.format(angles[j]),bbox_inches='tight')
 
-    ax_hm.set_xlabel('Frequency'+ '  '+r'$[\Omega_i]$',**tnrfont)
+    ax_hm.set_xlabel('Perpendicular Wavenumber'+ '  '+r'$[\Omega_i/V_A]$',**tnrfont)
     ax_hm.set_ylabel('Parallel Wavenumber'+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
     ax_hm.set_ylim(-2,2) ; ax_hm.set_xlim(0,15)
-    fig_hm.savefig('freq_kpara_angle_lines.png',bbox_inches='tight')
+    fig_hm.savefig('kpara_kperp_angle_lines.png',bbox_inches='tight')
     ax_line[-1].set_xlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
     fig_line.supylabel('Growth rate '+r'$[\Omega_i]$',**tnrfont,x=-0.1)
     fig_line.savefig('freq_growth_angles_combi.png',bbox_inches='tight')
     return None
 
 # plot 2d or 3d over loop over y (xi2) in x (freq) and z (growth rate) space
-def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,Nperw=10,**kwargs):
+def get_peak_freqs(home,sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,Nperw=10,**kwargs):
     plot_2D=kwargs.get('plot_2D')
     plot_3D=kwargs.get('plot_3D')
     plot_hm=kwargs.get('plot_hm')
@@ -489,6 +504,7 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
         # 2d colormap
         fig2d,ax2d=plt.subplots(figsize=(15,2))
         ax2d.set_facecolor('#008066') # first color in summer heatmap
+        # ax2d.set_facecolor('#FFFFFF') # white
         x=[];y=[]
     if plot_3D:
         # 3d surface
@@ -504,8 +520,8 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
     # loop over concentrations
     for i in range(len(loop)):
         print(loop[i])
-        os.chdir(sollocs[i])
-        data=read_all_data(loc=sollocs[i])
+        os.chdir(home+sollocs[i])
+        data=read_all_data(loc=home+sollocs[i])
         w0,k0,w,dw,kpara,kperp = data
         xarr, zarr = make1D(w,dw,norm=(w0,w0),maxnormx=maxnormf,bins=fbins)
         # 2D plot
@@ -537,26 +553,25 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
             ax2d.axvline(i,color='darkgrey',linestyle='--')
         # plot freqs vs. xi2 and gamma as color
         for i in range(len(z)):
-            im2d = ax2d.scatter(x[i],y[i],c=z[i],marker='s',s=25,vmin=0,vmax=0.15,cmap='summer',edgecolor='none')
-        # plot two trend lines
-        ax2d.plot([9.5,10],[1,0],linestyle='--',color='k',alpha=0.75)
-        ax2d.annotate('A',xy=(9.3,0.8),xycoords='data')
-        ax2d.plot([4.5,10],[1.05,0],linestyle='--',color='k',alpha=0.75)
-        ax2d.annotate('B',xy=(6,0.6),xycoords='data')
+            im2d = ax2d.scatter(x[i],y[i],c=z[i],marker='s',s=25,vmin=0,vmax=0.015,cmap='summer',edgecolor='none') # 'summer'
+        # # plot two trend lines
+        # ax2d.plot([9.5,10],[1,0],linestyle='--',color='k',alpha=0.75)
+        # ax2d.annotate('A',xy=(9.3,0.8),xycoords='data')
+        # ax2d.plot([4.5,10],[1.05,0],linestyle='--',color='k',alpha=0.75)
+        # ax2d.annotate('B',xy=(6,0.6),xycoords='data')
         # colorbar, labelling and other formatting
         cbar2d = fig2d.colorbar(im2d)
         cbar2d.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
         ax2d.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         ax2d.set_ylabel(r'$\xi_T$',**tnrfont)
         ax2d.set_xlim(0,maxnormf)
-        ax2d.set_ylim(0,1)
-        # fig2d.savefig('../freq_xiT_growth_peaks_Nperw_{}.png'.format(Nperw),bbox_inches='tight')
-        plt.show()
+        ax2d.set_ylim(0,np.max(loop))
+        fig2d.savefig(home+'freq_xiT_growth_peaks_Nperw_{}.png'.format(Nperw),bbox_inches='tight')
     if plot_hm:
         # plot integer deuteron harmonics
         for i in range(0,maxnormf+1,1):
             axhm.axvline(i,color='darkgrey',linestyle='--')
-        imhm = axhm.imshow(growth_hm,origin='lower',aspect='auto',extent=[0,maxnormf,0,1],cmap='summer',interpolation='gaussian',clim=(0,0.15))
+        imhm = axhm.imshow(growth_hm,origin='lower',aspect='auto',extent=[0,maxnormf,0,np.max(loop)],cmap='summer',interpolation='gaussian',clim=(0,0.015))
         # cbar = fig.colorbar(im, orientation='vertical', pad=0.1)
         cbarhm = fighm.colorbar(imhm)
         cbarhm.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
@@ -564,8 +579,9 @@ def get_peak_freqs(sollocs=[''],loop=[],maxnormf=18,fbins=800,plateau_size=0.5,N
             # im = axhm.scatter(x[i],y[i],facecolor='none',marker='s',s=12,edgecolor='k',alpha=0.5)
         axhm.set_xlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont)
         axhm.set_ylabel(r'$\xi_T$',**tnrfont)
-        fighm.savefig('../freq_xiT_growth_feathered.png',bbox_inches='tight')
+        fighm.savefig(home+'freq_xiT_growth_feathered.png',bbox_inches='tight')
         # plt.show()
+    plt.show()
     plt.clf()
     return None
 
@@ -581,10 +597,10 @@ def make_all_plots(alldata=None,cmap='summer'):
     l3 = "Frequency"+ "  "+r"$[\Omega_i]$"                      # r'$\omega/\Omega_i$'
     l4 = "Growth Rate"+ "  "+r"$[\Omega_i]$"                    # r'$\gamma/\Omega_i$'
     # plotting scripts
-    plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.15),cmap=cmap,labels=[l1,l2],contours=False,\
+    plot_k2d_growth(kpara,kperp,dw,w,norm=[w0,k0],clims=(0,0.015),cmap=cmap,labels=[l1,l2],contours=False,\
                     rowlim=(-maxnormkpara,maxnormkpara),collim=(0,maxnormkperp),maxnormf=maxnormkperp,dump=False) # load
-    plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,norm=[w0,k0],labels=[l3,l4])
-    plot_frq_growth_angles(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
+    plot_frq_growth(w,dw,kpara,maxnormf=maxnormkperp,maxnormg=0.015,norm=[w0,k0],labels=[l3,l4])
+    plot_frq_growth_angles(kpara,kperp,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
     plot_frq_kpara(kpara,w,dw,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l2])
     plot_frq_kperp(kperp,w,dw,maxk=maxnormkperp,maxnormf=maxnormfreq,norm=[w0,k0],cmap=cmap,labels=[l3,l1])
     return None
@@ -641,23 +657,33 @@ if __name__ == '__main__':
     para_calc(LOC_FILE,plot=True)
     """
 
-    # home = '/home/space/phrmsf/Documents/ICE_DS/run_5.18_0.06653_0.5821229701572894_0.01_0.01_15.0_5.5__25.0_4.0_1.0e20_0.00015_1024/'
-    # data=read_all_data(home)
-    # os.chdir(home)
-    # make_all_plots(data)
-    # sys.exit()
+    # p-B11
+    homeloc = '/home/space/phrmsf/Documents/ICE_DS/p_B11/'
+    sollocs = [i+'/' for i in os.listdir(homeloc) if 'run' in i]
+    XI2 = [100*float(i.split('_')[2]) for i in sollocs]
 
+    # sort sollocs and XI2
+    sollocs = np.array([x for _,x in sorted(zip(XI2,sollocs))])
+    XI2 = np.array([x/100 for x,_ in sorted(zip(XI2,sollocs))])
+    # for i in range(len(sollocs)):
+    #     os.chdir(home+sollocs[i])
+    #     data=read_all_data(home+sollocs[i])
+    #     make_all_plots(data)
+    get_peak_freqs(home=homeloc,sollocs=sollocs,loop=XI2,maxnormf=15,plot_2D=True,plot_hm=True)
+    sys.exit()
+
+    # D-T
     homeloc = homes.get('lowkperp_T')
     sollocs = [getsollocs(homeloc)[3]]
 
     for i in range(len(sollocs)):
         os.chdir(sollocs[i])
         w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[i])
-        Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
-        plot_frq_growth_angles(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0])
+        # Z = make2D(kpara,kperp,dw,rowlim=(-4*k0,4*k0),collim=(0,15*k0))
+        plot_frq_growth_angles(kpara,kperp,dw,rowlim=(-4*k0,4*k0),collim=(0,15*k0),norm=[w0,k0])
     sys.exit()
 
-    # DT runs
+    # D-T
     # XI2 = [i/200 for i in range(0,200,5)]
     # print(XI2)
     # XI2 = [i/100 for i in range(45,95,5)]
@@ -674,7 +700,7 @@ if __name__ == '__main__':
     # # plot peak frequencies # if plot heatmap then only use xi2=5, 10, 15...95 
     # XI2 = [i/100 for i in range(0,100,5)]
     # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/'.format(i) for i in XI2]
-    get_peak_freqs(sollocs=sollocs,loop=XI2,maxnormf=18,plot_2D=True)#,plot_hm=True 
+    get_peak_freqs(homeloc,sollocs=sollocs,loop=XI2,maxnormf=18,plot_2D=True)#,plot_hm=True 
     sys.exit()
 
     # # D runs
