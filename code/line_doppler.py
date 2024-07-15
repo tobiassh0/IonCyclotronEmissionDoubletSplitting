@@ -252,8 +252,10 @@ def get_line_doppler(rowdata,coldata,data,datanorm=1,norm=[1,1],rowlim=(None,Non
     intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=rowlim,collim=collim,norm=norm,label=label)
     return intensity, dopmaxang, Zij
 
-def plot_all(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=False,plot_grad=False,plot=False,name='',\
+def plot_all(homeloc=None,sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=False,plot_grad=False,plot=False,name='',\
             xlabel=r'$\xi_T$',bins=(512,512),fit_ODR=True):
+    if homeloc == None:
+        homeloc = os.getcwd()
     # check all params at start
     if name == '':
         if plot_angles: name = 'maxangle_xiT'
@@ -274,7 +276,7 @@ def plot_all(sollocs=[''],labels=[],levels=range(0,16),angles=[],plot_angles=Fal
     dopstdangles = np.zeros(len(sollocs)) # std angle per label    
     allabels = np.zeros((len(sollocs),len(levels))) # 2d allabels
     for i in range(len(sollocs)):
-        w0,k0,w,dw,kpara,kperp=read_all_data(loc=sollocs[i])
+        w0,k0,w,dw,kpara,kperp=read_all_data(loc=homeloc+sollocs[i])
         Va_c = getVa(w0,k0)/const.c # unitless
         try:
             Zij       = read_pkl(name+'_{}_Zij_lvlf_{}_angf_{}_lsize_{}'.format(i,levels[-1],angles[-1],lsize))
@@ -350,8 +352,8 @@ if __name__=='__main__':
     angles = np.linspace(-180,0,360) # np.array([-80,-85,-90,-95,-100])
     levels = range(0,16)
     # for i in range(len(sollocs)):
-    os.chdir(sollocs[0])
-    w0,k0,w,dw,kpara,kperp = read_all_data(loc=sollocs[0])
+    os.chdir(homeloc+sollocs[0])
+    w0,k0,w,dw,kpara,kperp = read_all_data(loc=homeloc+sollocs[0])
     Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
     intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0],label=labels[0])
     # plotSumGrowthAngle(angles,intensity,levels,labels[0])

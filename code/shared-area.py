@@ -40,6 +40,47 @@ if __name__=='__main__':
     # plt.imshow(sa,**imkwargs,cmap='binary',extent=(-50,50,-50,50)) ; plt.show()
     # sys.exit()
     
+    # p-B11
+    homeloc = '/home/space/phrmsf/Documents/ICE_DS/p_B11/'
+    sollocs = getsollocs(homeloc) # [i+'/' for i in os.listdir(homeloc) if 'run' in i]
+    for sol in sollocs:
+        XI2.append(float(sol.split('_')[2]))
+    XI2 = [float(i.split('_')[2]) for i in sollocs]
+    print(sollocs, XI2)
+
+    # D-T
+    homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/'
+    sollocs = getsollocs(homeloc)
+    XI2 = []
+    for sol in sollocs: # missing 11% in XI2 array
+        XI2.append(float(sol.split('run')[1].split('_')[2]))
+    XI2 = np.array(XI2)
+
+    angles=[89.0]
+    fig,ax=plt.subplots(nrows=2,sharex=True)
+    for i in range(len(sollocs)):
+        os.chdir(homeloc+sollocs[i])
+        w0,k0,w,dw,kpara,kperp = read_all_data(loc=homeloc+sollocs[i])
+        rowlim=(-4*k0,4*k0) ; collim=(0,15*k0)
+        Z = make2D(kpara,kperp,dw,rowlim=rowlim,collim=collim)
+        Ny, Nx = Z.shape
+        freqs, zi, zisum = get_freq_growth_angles(Z,wmax=15,rowlim=rowlim,collim=collim,norm=[w0,k0],angles=angles)
+        # find data points along line
+        xlim, ylim = ld.LineBoxIntersection(Ny,0,0,Ny/2,Nx,Ny,angles[0]*np.pi/180)
+        # convert all to real coordinates
+        xlim = (collim[0]/k0)+xlim*((collim[1]-collim[0])/k0)/Nx
+        ylim = (rowlim[0]/k0)+ylim*((rowlim[1]-rowlim[0])/k0)/Ny
+        # plotting
+        im = ax[0].imshow((Z/w0),**imkwargs,extent=[0,15,-4,4],cmap='summer')
+        cbar = plt.colorbar(im)
+        ax[0].plot(xlim,ylim,'k--')
+        ax[0].set_ylim(-4,4) ; ax[0].set_xlim(0,15)
+        fig,ax[0]=plotCycContours(fig,ax[0],norm=[w0,k0],maxnormf=15,rowlim=rowlim,collim=collim,bins=(1000,1000))
+        ax[1].plot(freqs[-1]/w0,zi[-1])
+        plt.show()
+    sys.exit()
+
+    # D-T
     homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/'
     sollocs = getsollocs(homeloc)
     XI2 = []

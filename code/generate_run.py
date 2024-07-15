@@ -100,7 +100,7 @@ if __name__=='__main__':
 	
 	# p-B11
 	name = 'p_B11'
-	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --minorityenergyMeV 5.5 --magneticField 5.18 --temperaturekeV 25 --electronDensity 1e20 '
+	btext = '../julia-1.9.3/bin/julia --proj LMV.jl --minorityenergyMeV 5.5 --magneticField 5.18 --temperaturekeV 3 --electronDensity 5e19 '
 	majspec = 'Protons'
 	maj2spec = 'B11'
 	minspec = 'Alphas'
@@ -113,16 +113,19 @@ if __name__=='__main__':
 	m3, Z3 = mc.get(minspec)
 
 	# loop over tritium concentration for fixed electron number density
+	ne = 5e19
+	B0 = 5.18
+	xi3 = 1e-3
 	umin = np.sqrt(2*5.5e6*qe/m3)
-	xi2arr = np.array([i for i in np.arange(0,0.2*(1-2*1.5e-4),0.01)])# if (i/2)%5!=0])
-	xi1arr = np.array([1-Z2*xi2arr[i]-Z3*1.5e-4 for i in range(len(xi2arr))])
-	vA = np.array([5.18/np.sqrt(mu0*1e20*(m1*xi1arr[i]+m2*xi2arr[i]+m3*1.5e-4)) for i in range(len(xi2arr))])
+	xi2arr = np.array([i for i in np.arange(0,0.2*(1-2*xi3),0.01)])# if (i/2)%5!=0])
+	xi1arr = np.array([1-Z2*xi2arr[i]-Z3*xi3 for i in range(len(xi2arr))])
+	vA = np.array([B0/np.sqrt(mu0*ne*(m1*xi1arr[i]+m2*xi2arr[i]+m3*xi3)) for i in range(len(xi2arr))])
 	uperp_vA = 0.98
 	uperp = np.array([uperp_vA*vA[i] for i in range(len(vA))])
 	upara = np.array([np.sqrt(umin**2 - uperp[i]**2) for i in range(len(uperp))])
 	pitcharr = np.array([upara[i]/umin for i in range(len(upara))])
 	print(xi2arr)
-	loop_generate([majspec,maj2spec,minspec],filename=name,_btext=btext,_xi2arr=xi2arr,_n0=1e20,_B0=5.18,_xi3=1.5e-4,_pitcharr=pitcharr)
+	loop_generate([majspec,maj2spec,minspec],filename=name,_btext=btext,_xi2arr=xi2arr,_n0=ne,_B0=B0,_xi3=xi3,_pitcharr=pitcharr)
 	sys.exit()
 
 	# loop over minority energetic particle energy
