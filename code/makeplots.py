@@ -441,7 +441,7 @@ def get_frq_growth_angles(Z,wmax=15,rowlim=(None,None),collim=(None,None),norm=[
         # convert all to real coordinates
         xlim = (collim[0]/norm[1])+xlim*((collim[1]-collim[0])/norm[1])/Nx
         ylim = (rowlim[0]/norm[1])+ylim*((rowlim[1]-rowlim[0])/norm[1])/Ny
-        if xlim[-1]==0 and ylim[-1]==0:
+        if xlim[-1]<0.00001 and ylim[-1]<0.00001: # should be equal to 0, this is valid for difference in angles greater than a degree 
             zi[-1] = np.flip(zi[-1]) # opposite direction of line
         # summate all points # "growth per (dkpara,dw) cell"
         zisum.append(np.sum(zi[-1])/len(zi[-1])) # normalise to number of cells along line
@@ -456,10 +456,8 @@ def get_frq_growth_angles(Z,wmax=15,rowlim=(None,None),collim=(None,None),norm=[
 # plot peak frequencies in 2d xi2 space for a given angle
 def plot_peak_frq_angle(home,sollocs,XI2=[0.1,0.3,0.5,0.7],wmax=15,rowlim=(None,None),collim=(None,None),angle=89.0,\
                         plateau_size=0.5,Nperw=10,growth_thresh=0.0):
-
     fig,ax=plt.subplots(figsize=(15,2))
     ax.set_facecolor('#008066') # first color in summer heatmap
-    x=[] ; y=[] ; z=[]
     # loop through each xi2
     for i in range(len(XI2)):
         print(XI2[i])
@@ -472,10 +470,11 @@ def plot_peak_frq_angle(home,sollocs,XI2=[0.1,0.3,0.5,0.7],wmax=15,rowlim=(None,
             collim = np.array(collim)*k0
         # make 2d data (kperp,kpara)
         Z = make2D(kpara,kperp,dw,rowlim=rowlim,collim=collim,dump=False,name='k2d_growth')
-        # get growth rate along angles
+        # get growth rate along angle
         freqs,growthrates,_=get_frq_growth_angles(Z=Z,wmax=wmax,rowlim=rowlim,collim=collim,norm=[w0,k0],angles=[angle])
         xarr = freqs[-1]
         zarr = growthrates[-1]
+        # plt.plot(xarr,zarr) ; plt.show()
         # get peaks of growth rates
         peaks = extractPeaks(zarr)
         xarp = xarr[peaks]/w0
@@ -490,6 +489,7 @@ def plot_peak_frq_angle(home,sollocs,XI2=[0.1,0.3,0.5,0.7],wmax=15,rowlim=(None,
     ax.set_ylabel(r'$\xi_T$',**tnrfont)
     ax.set_xlim(0,15)
     ax.set_ylim(0,np.max(XI2))
+    ax.annotate(r'${:.1f}^\circ$'.format(angle),xy=(0.01,0.95),xycoords='axes fraction',va='top',ha='left',**tnrfont)
     fig.savefig(home+'freq_xiT_growth_peaks_angle_{}.png'.format(angle),bbox_inches='tight')
     return None
 
@@ -757,8 +757,10 @@ if __name__ == '__main__':
     sollocs = [getsollocs(homeloc)[3]]
     sollocs = getsollocs(homeloc) 
     XI2 = [float(i.split('_')[2]) for i in sollocs]
-    plot_peak_frq_angle(homeloc,sollocs,XI2=XI2,wmax=15,rowlim=(-4,4),collim=(0,15),angle=89.0,\
-                        plateau_size=0.5,Nperw=10)
+    angles = [85.0,88.0,89.0,90.0,91.0,92.0,95.0]
+    for angle in angles:
+        plot_peak_frq_angle(homeloc,sollocs,XI2=XI2,wmax=15,rowlim=(-4,4),collim=(0,15),angle=angle,\
+                            plateau_size=0.5,Nperw=10)
     sys.exit()
     # for i in range(len(sollocs)):
     #     os.chdir(sollocs[i])
