@@ -301,7 +301,7 @@ def plot_k2d_growth_combined(sollocs=[''],loop=[],cmap='summer',clims=(0,0.15),r
         else:
             fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=[12,13,14,15])        
         # ax.plot([0,15],[-1,1])
-        ax.annotate("{:.2f}".format(loop[i]), xy=(0.0125,0.9), xycoords='axes fraction',**tnrfont)
+        ax.annotate(r"$\xi_T=$"+"{:.0f}%".format(100*loop[i]), xy=(0.0125,0.975), xycoords='axes fraction',**tnrfont,va='top',ha='left')
         i+=1
 
     # formatting    
@@ -351,7 +351,7 @@ def plot_k2d_growth_combined(sollocs=[''],loop=[],cmap='summer',clims=(0,0.15),r
     cbar.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
     fig.supylabel('Parallel Wavenumber '+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
     fig.supxlabel('Perpendicular Wavenumber '+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
-    fig.savefig('../kperp_kpara_growthrates_combined.pdf',bbox_inches='tight')
+    fig.savefig('../kperp_kpara_growthrates_combined-1.pdf',bbox_inches='tight')
     # plt.show()
 
     return None
@@ -495,7 +495,7 @@ def plot_peak_frq_angle(home,sollocs,XI2=[0.1,0.3,0.5,0.7],wmax=15,rowlim=(None,
 
 # plot freq vs. growth for a given (range of) angle(s)
 def plot_frq_growth_angles(kpara,kperp,dw,wmax=15,rowlim=(None,None),collim=(None,None),norm=[1,1],angles=[None],\
-                            anglabels=None,colorarr=None,clims=(0,0.15)):
+                            anglabels=None,colorarr=None,clims=(0,0.10)):
     Z = make2D(kpara,kperp,dw,rowlim=np.array(rowlim),collim=np.array(collim))
     Ny, Nx = Z.shape
     # lsize = np.sqrt(Nx**2+Ny**2) # maximum length of array
@@ -514,7 +514,7 @@ def plot_frq_growth_angles(kpara,kperp,dw,wmax=15,rowlim=(None,None),collim=(Non
     kparamin, kparamax = (rowlim/norm[1])
     extents = [kperpmin,kperpmax,kparamin,kparamax]
     # collection of growths for given range of angles
-    fig_line,ax_line=plt.subplots(figsize=(4,int(1.5*len(angles))),nrows=len(angles),sharex=True)
+    fig_line,ax_line=plt.subplots(figsize=(4,int(2*len(angles))),nrows=len(angles),sharex=True)
     # heatmap of kpara vs freq
     fig_hm,ax_hm=plt.subplots(figsize=(10,5))
     ax_hm.imshow(Z/norm[0],**imkwargs,cmap='summer',clim=clims,extent=[collim[0]/norm[1],collim[1]/norm[1],rowlim[0]/norm[1],rowlim[1]/norm[1]])
@@ -720,12 +720,14 @@ def getsollocs(home=''):
 #-#-#
 if __name__ == '__main__':
     ## BODY ## 
+    
     homes = {
-        'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/",
-        'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/",
+        'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/",
+        'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons_high_kperp/",
         'lowkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/",
         'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
     }
+    
     """
     :: examples  :: 
         # one file
@@ -753,40 +755,44 @@ if __name__ == '__main__':
     # sys.exit()
 
     # # D-T
-    homeloc = homes.get('lowkperp_T')
-    sollocs = [getsollocs(homeloc)[3]]
-    sollocs = getsollocs(homeloc) 
-    XI2 = [float(i.split('_')[2]) for i in sollocs]
-    angles = [85.0,88.0,89.0,90.0,91.0,92.0,95.0]
-    for angle in angles:
-        plot_peak_frq_angle(homeloc,sollocs,XI2=XI2,wmax=15,rowlim=(-4,4),collim=(0,15),angle=angle,\
-                            plateau_size=0.5,Nperw=10)
-    sys.exit()
+    # homeloc = homes.get('lowkperp_noT')
+    # sollocs = getsollocs(homeloc)
+    # XI2 = [float(i.split('_')[8]) for i in sollocs]
+    # sollocs = [getsollocs(homeloc)[3]]
+    # angles = [85.0,88.0,89.0,90.0,91.0,92.0,95.0]
+    # for angle in angles:
+    #     plot_peak_frq_angle(homeloc,sollocs,XI2=XI2,wmax=10,rowlim=(-4,4),collim=(0,15),angle=angle,\
+    #                         plateau_size=0.5,Nperw=10)
+
+    # sollocs = ['run_2.07_0.0_-0.646_0.01_0.01_15.0_3.5_0.0_1.0_4.0_1.7e19_0.00015_1024/']
     # for i in range(len(sollocs)):
-    #     os.chdir(sollocs[i])
+    #     os.chdir(homeloc+sollocs[i])
     #     w0,k0,w,dw,kpara,kperp = read_all_data(loc=homeloc+sollocs[i])
     #     # Z = make2D(kpara,kperp,dw,rowlim=(-4*k0,4*k0),collim=(0,15*k0))
-    #     plot_frq_growth_angles(kpara,kperp,dw,rowlim=(-4*k0,4*k0),collim=(0,15*k0),norm=[w0,k0])
+    #     plot_frq_growth_angles(kpara,kperp,dw,wmax=11,rowlim=(-4*k0,4*k0),collim=(0,15*k0),norm=[w0,k0],clims=(0,0.045))
 
-    # D-T
+    # sys.exit()
+
+    homeloc=homes.get('highkperp_T')
+    # sollocs = getsollocs(homeloc)
     # XI2 = [i/200 for i in range(0,200,5)]
     # print(XI2)
     # XI2 = [i/100 for i in range(45,95,5)]
     # XI2.append(0)
     # XI2 = np.sort(XI2)
-    sollocs = getsollocs(homeloc)
-    XI2 = []
-    for sol in sollocs: # all runs (not in order) use list comprehension for ordered and specific XI2  
-        XI2.append(float(sol.split('run')[1].split('_')[2]))
-    XI2 = np.array(XI2)
+    XI2 = [i/100 for i in range(45,95,5)]
+    XI2.append(0)
+    XI2 = np.sort(XI2)
+    sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    # for sol in sollocs: # all runs (not in order) use list comprehension for ordered and specific XI2  
+    #     XI2.append(float(sol.split('run')[1].split('_')[2]))
+    # XI2 = np.array(XI2)
     # kd.plot_doppler_kernel(sollocs=[sollocs[-1]],labels=[XI2[-1]])
     # ld.plot_all(sollocs=sollocs,labels=XI2,name='maxvdop_xiT',plot_angles=True,xlabel=r'$\xi_T$') # [str(i*100)+'%' for i in XI2])
-    # plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
+    plot_k2d_growth_combined(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25))
     # # plot peak frequencies # if plot heatmap then only use xi2=5, 10, 15...95 
-    # XI2 = [i/100 for i in range(0,100,5)]
-    # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_15.0_3.5__1.0_4.0_1.7e19_0.00015_1024/'.format(i) for i in XI2]
-    get_peak_frqs(homeloc,sollocs=sollocs,loop=XI2,maxnormf=18,plot_2D=True)#,plot_hm=True 
     sys.exit()
+    get_peak_frqs(homeloc,sollocs=sollocs,loop=XI2,maxnormf=18,plot_2D=True)#,plot_hm=True 
 
     # # D runs
     # homeloc = homes.get('highkperp_noT')
