@@ -19,7 +19,7 @@ const argsettings = ArgParseSettings()
     "--ngridpoints"
         help = "The number of grid points in each direciton cyclotronfrequency wavenumber space (default 1024)"
         arg_type = Int
-        default = 2^10
+        default = 2^11
     "--kparamax"
         help = "The upper limit in kpara in units of Ωi / Va"
         arg_type = Float64
@@ -27,7 +27,7 @@ const argsettings = ArgParseSettings()
     "--kperpmax"
         help = "The upper limit in kperp in units of Ωi / Va"
         arg_type = Float64
-        default = 15.0
+        default = 25.0
     "--vthpararatio"
         help = "The parallel thermal speed of the enerrgtic speices as a function of its bulk speed"
         arg_type = Float64
@@ -117,15 +117,15 @@ addprocs(nprocsadded, exeflags="--project")
 
   # mass and charge of ions
 
-#  # D-T-α
-#  # masses
-#  m1 = md*mₑ
-#  m2 = mT*mₑ
-#  mmin = mα*mₑ
-#  # charge numbers
-#  z1 = 1
-#  z2 = 1
-#  zmin = 2
+  # D-T-α
+  # masses
+  m1 = md*mₑ
+  m2 = mT*mₑ
+  mmin = mα*mₑ
+  # charge numbers
+  z1 = 1
+  z2 = 1
+  zmin = 2
 
 #  # D-He3-p
 #  # masses
@@ -137,15 +137,15 @@ addprocs(nprocsadded, exeflags="--project")
 #  z2 = 2
 #  zmin = 1
 
-  # p-B11-α
-  # masses
-  m1 = mp*mₑ
-  m2 = mB11*mₑ
-  mmin = mα*mₑ
-  # charge numbers
-  z1 = 1
-  z2 = 5
-  zmin = 2
+#  # p-B11-α
+#  # masses
+#  m1 = mp*mₑ
+#  m2 = mB11*mₑ
+#  mmin = mα*mₑ
+#  # charge numbers
+#  z1 = 1
+#  z2 = 5
+#  zmin = 2
 
   # concentrations and densities
   # Fig 18 Cottrell 1993

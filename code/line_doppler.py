@@ -144,13 +144,14 @@ def LineBoxIntersection(Ys,Ye,Xn,Yn,XL,YL,theta):
 def line_integrate(Z,xposini=[],angles=[],rowlim=(-4,4),collim=(0,15),norm=[1,1],lsize=None,label='',colorarr=True):
     """
         In:
-            Z : 2d matrix of data points to calculate integral over
-            xposini : x positions, in units of x-axis, as to where take line integral
-            angles : angles over which to loop, defaults to 0 -> 90deg
+            Z           : 2d matrix of data points to calculate integral over
+            xposini     : x positions, in units of x-axis, as to where take line integral
+            angles      : angles over which to loop, defaults to 0 -> 90deg
+            colorarr    : bool, flag for if want colour distinction angle dependency
         Out:
-            intensity : summated line intensity normalised to the number of cells within the line (sum(zi)/len(zi))
-            dopangmax : array of angles per xposini that correspond to the strongest total intensity along the line
-            Zij       : 3d array of the line intensity [shape of (len(xposini), len(angles), len(zi))]
+            intensity   : summated line intensity normalised to the number of cells within the line (sum(zi)/len(zi))
+            dopangmax   : array of angles per xposini that correspond to the strongest total intensity along the line
+            Zij         : 3d array of the line intensity [shape of (len(xposini), len(angles), len(zi))]
     """
     Ny, Nx = Z.shape
     if not lsize:
@@ -232,6 +233,7 @@ def plotSumGrowthAngle(angles,intensity,levels,label):
     ax.set_xlabel(r'$\theta$'+' '+'[deg]',**tnrfont)
     ax.set_ylabel(r'Growth Rate per cell '+r'$[\Omega_i]$',**tnrfont)
     ax.set_ylim(0)#,0.012) # don't plot negative growths # hardcoded
+    # plt.show()
     fig.savefig('intensity_angle_XI2_{}.png'.format(label),bbox_inches='tight')
     plt.clf()
     return None
@@ -345,17 +347,25 @@ def plot_all(homeloc=None,sollocs=[''],labels=[],levels=range(0,16),angles=[],pl
     return None
 
 if __name__=='__main__':
+    """
+    Testing suite of line doppler integration techniques ion the form of polar plots, histograms etc.
+    For the use of the Doppler shift line integration technique in articles see makeplots.py functions 
+        plot_frq_growth_angles & get_frq_growth_angles
+    """
     homeloc = '/home/space/phrmsf/Documents/ICE_DS/JET26148/D_T_energy_scan/' # /home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/
     sollocs = [getsollocs(homeloc)[0]]
     print(sollocs)
     labels = ['1MeV']
-    angles = np.linspace(-180,0,360) # np.array([-80,-85,-90,-95,-100])
-    levels = range(0,16)
+    angles = np.array([-80,-85,-90,-95,-100]) # np.linspace(-180,0,360)
+    levels = [0]#range(0,16)
     # for i in range(len(sollocs)):
     os.chdir(homeloc+sollocs[0])
     w0,k0,w,dw,kpara,kperp = read_all_data(loc=homeloc+sollocs[0])
     Z = make2D(kpara,w,dw,rowlim=(-4*k0,4*k0),collim=(0,15*w0))
     intensity, dopmaxang, Zij = line_integrate(Z,xposini=levels,angles=angles,rowlim=(-4*k0,4*k0),collim=(0,15*w0),norm=[w0,k0],label=labels[0])
+    print(Zij)
+    plt.plot(Zij[0,0,:]) ; plt.show()
+    sys.exit()
     # plotSumGrowthAngle(angles,intensity,levels,labels[0])
     fig,ax=plt.subplots(figsize=(8,6))
     ax.imshow(Z,origin='lower',interpolation='none',aspect='auto',cmap='summer',extent=[0,15,-4,4])
