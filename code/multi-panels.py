@@ -54,7 +54,7 @@ def plot_k2d_growth_multipanel(sollocs=[''],loop=[],cmap='summer',clims=(0,0.15)
             Z,extents=make2D(kpara,kperp,dw,rowlim=rowlim*norm[1],collim=collim*norm[1],\
                                 bins=(1000,1000),limits=True,dump=True,name='k2d_growth') # y, x, val
         im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
-        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=np.arange(_xlim[0],_xlim[1],1))
+        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=np.arange(_xlim[0],_xlim[1]+1,1))
         # ax.plot([0,15],[-1,1])
         if i==0:
             ax.annotate(r"$\xi_T=$"+"{:.0f}%".format(100*loop[i]), xy=(0.0125,0.975), xycoords='axes fraction',**tnrfont,va='top',ha='left')
@@ -96,7 +96,7 @@ def plot_k2d_growth_multipanel(sollocs=[''],loop=[],cmap='summer',clims=(0,0.15)
     fig.supylabel('Parallel Wavenumber '+'  '+r'$[\Omega_i/V_A]$',**tnrfont)
     fig.supxlabel('Perpendicular Wavenumber '+'  '+r'$[\Omega_i/V_A]$',**tnrfont,y=-0.075)
     fig.savefig('../kperp_kpara_growthrates_{}_{}.png'.format(_xlim,_ylim),bbox_inches='tight')
-    # plt.show()
+    plt.show()
     return None
 
 # plot k2d again for zero-percent tritium
@@ -113,6 +113,7 @@ def k2d_zeropercent(solloc,_xlim=(0,15),_ylim=(-4,4),clims=(0,0.15)):
     rowlim = np.array([extents[2],extents[3]])
     # setup figure
     fig,ax=plt.subplots(figsize=(8,5),layout='constrained')
+    outside_ticks(fig)
     im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap='summer',clim=clims)
     fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=np.arange(_xlim[0],_xlim[1],1))
     # figure formatting & colorbar
@@ -184,12 +185,12 @@ def plot_growth_vs_JET_power(sollocs,labels,_xlim=(0,15),_ylim=(0,0.15)):
         # plot black line (made 1D)
         sw, sdw = make1D(w[thresh]/norm[0],dw[thresh]/norm[0],norm=(norm[0],norm[0]),maxnormx=_xlim[1],bins=500) # very small No. bins
         ax[c].plot(sw,sdw,color='b')
-        ax[c].annotate('{:.0f}%'.format(100*labels[c]),xy=(0.05,0.95),xycoords='axes fraction',ha='left',va='top')
-        # ax[c].plot(JETfreq,JETpower,color='b')
-        axJET = ax[c].twinx()
-        axJET.plot(JETfreq/norm[0],JETpower,color='k')
-        if c in [2,5]:
-            axJET.set_ylabel('dB',**tnrfont)
+        ax[c].annotate('{:.0f}%'.format(100*labels[c]),xy=(0.05,0.95),xycoords='axes fraction',ha='left',va='top',**tnrfont)
+        ax[c].plot(JETfreq/norm[0],JETpower*(0.08/np.max(JETpower)),color='k',linestyle=':')
+        # axJET = ax[c].twinx()
+        # axJET.plot(JETfreq/norm[0],JETpower,color='b')
+        # if c in [2,5]:
+        #     axJET.set_ylabel('dB',**tnrfont)
         c+=1
     # formatting
     ax=np.array(ax)
@@ -210,7 +211,7 @@ def trends_get_peak_frqs(home,sollocs=[''],XI2=[],fbins=800,plateau_size=0.5,Npe
     # loop (zoomed figs)
     gs = GridSpec(1, 5, bottom=0.075, top=0.98, left=0.1, right=0.95, wspace=0.35, hspace=0.35) # nrows, ncols, l, r, wsp, hsp
     ax1 = fig.add_subplot(gs[:, :3])             # 1
-    ax2 = fig.add_subplot(gs[:, 3:],sharey=ax1)  # 2
+    ax2 = fig.add_subplot(gs[:, 3:])  # 2
 
     allax = fig.axes
     for ax in allax: 
@@ -262,12 +263,52 @@ def trends_get_peak_frqs(home,sollocs=[''],XI2=[],fbins=800,plateau_size=0.5,Npe
     fig.supylabel(r'$\xi_T$',**tnrfont)
     fig.supxlabel('Frequency'+' '+r'$[\Omega_i]$',**tnrfont,y=-0.25)
     allax[0].set_ylim(0,np.max(XI2))
+    allax[1].set_ylim(0,np.max(XI2))
     allax[0].set_xlim(_xlimA)
     allax[1].set_xlim(_xlimB)
     # plt.show()
     fig.savefig(home+'freq_xiT_growth_peaks_Nperw_{}_AB_highlight.png'.format(Nperw),bbox_inches='tight')
     
     return None
+
+# plot isoangle lines for selected tritium %
+def get_growth_isoangle(sollocs=[''],XI2=[],rowlim=(None,None),collim=(None,None),angle=89.0,wmax=15):
+    # set perp and para limits
+    if not rowlim[0]:
+        rowlim = np.array([-4,4])
+        collim = np.array([0,25])
+    # setup fig
+    fig,axes=plt.subplots(figsize=(12,6),sharex=True,sharey=True,layout='constrained',nrows=2,ncols=3)
+    ax=axes.ravel()
+    # loop through concentrations
+    for i in range(len(XI2)):
+        print(XI2[i])
+        os.chdir(sollocs[i])
+        # load data
+        data=read_all_data(loc=sollocs[i])
+        w0,k0,w,dw,kpara,kperp = data
+        # make 2d growth (kperp,kpara)
+        Z, extents = make2D(kpara,kperp,dw,rowlim=rowlim,collim=collim,limits=True,dump=False,name='k2d_growth')
+        # real units
+        collim=np.array([extents[0],extents[1]])
+        rowlim=np.array([extents[2],extents[3]])
+        # make 2d frequency TODO; make this work in get_frq_growth_angles()
+        Zfreq = make2D(kpara,kperp,w,rowlim=rowlim,collim=collim,dump=False,name='k2d_freq')
+        # ax[0].imshow(Z/w0,**imkwargs,cmap='summer',vmin=0.0,vmax=0.15,extent=[0,25,-4,4])
+        # ax[0].contour(Zfreq/w0,levels=range(0,25),clim=(0,25),colors='k',extent=[0,25,-4,4])
+        # get growth rate along angle
+        freqs,growthrates,_=get_frq_growth_angles(Z=Z,Zfreq=Zfreq,wmax=wmax,rowlim=rowlim,collim=collim,norm=[w0,k0],angles=[angle])
+        # plot
+        ax[i].plot(freqs[0]/w0,growthrates[0]/w0,color='k')
+        ax[i].annotate('{:.0f}%'.format(100*XI2[i]),xy=(0.05,0.95),xycoords='axes fraction',ha='left',va='top',**tnrfont)        
+    ax[0].set_xlim(0,20)
+    ax[0].set_ylim(0,0.15)
+    fig.supxlabel('Frequency '+r'$[\Omega_i]$',**tnrfont)
+    fig.supylabel('Growth Rate '+r'$[\Omega_i]$',**tnrfont)
+    fig.savefig('../freq_growth_PIC-concentrations_{}.png'.format(XI2),bbox_inches='tight')
+    plt.show()
+    return None
+
 
 if __name__=='__main__':
     homes = {
@@ -292,17 +333,23 @@ if __name__=='__main__':
     # XI2 = [i/100 for i in np.arange(0,100,10)]
     # # XI2.append(0.95)
     # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    # growth_combined(sollocs,labels=XI2,_xlim=(13,15))
+    # growth_combined(sollocs,labels=XI2,_xlim=(5,12))
 
     # # (3)
     # homeloc=homes.get('highkperp_T')
     # XI2 = [0.0, 0.01, 0.11, 0.25, 0.38, 0.5]
     # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    # plot_growth_vs_JET_power(sollocs,labels=XI2,_xlim=(0,11))
+    # plot_growth_vs_JET_power(sollocs,labels=XI2,_xlim=(0,11),_ylim=(0,0.1))
 
-    # (4)
+    # # (4)
+    # homeloc=homes.get('highkperp_T')
+    # XI2 = [i/200 for i in range(0,200,5)]
+    # sollocs = ['run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    # trends_get_peak_frqs(homeloc,sollocs=sollocs,XI2=XI2,maxnormf=18,_xlimA=(5,11),_xlimB=(9,11))
+    
+    # (5)
     homeloc=homes.get('highkperp_T')
-    XI2 = [i/200 for i in range(0,200,5)]
-    sollocs = ['run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    trends_get_peak_frqs(homeloc,sollocs=sollocs,XI2=XI2,maxnormf=18,_xlimA=(5,11),_xlimB=(9,11))
+    XI2 = [0.0,0.01,0.11,0.25,0.38,0.5]
+    sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    get_growth_isoangle(sollocs,XI2)
     
