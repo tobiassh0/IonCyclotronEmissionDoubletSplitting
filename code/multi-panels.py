@@ -54,12 +54,14 @@ def plot_k2d_growth_multipanel(sollocs=[''],loop=[],cmap='summer',clims=(0,0.15)
             Z,extents=make2D(kpara,kperp,dw,rowlim=rowlim*norm[1],collim=collim*norm[1],\
                                 bins=(1000,1000),limits=True,dump=True,name='k2d_growth') # y, x, val
         im = ax.imshow(Z/norm[0],aspect='auto',origin='lower',extent=np.array(extents)/norm[1],cmap=cmap,clim=clims)
-        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=np.arange(_xlim[0],_xlim[1]+1,1))
+        fig,ax=plotCycContours(fig,ax,norm=norm,rowlim=rowlim*norm[1],collim=collim*norm[1],levels=np.arange(_xlim[0],_xlim[1],1))
         # ax.plot([0,15],[-1,1])
         if i==0:
-            ax.annotate(r"$\xi_T=$"+"{:.0f}%".format(100*loop[i]), xy=(0.0125,0.975), xycoords='axes fraction',**tnrfont,va='top',ha='left')
+            ax.annotate(r"$\xi_T=$"+"{:.0f}%".format(100*loop[i]),xy=(0.0125,0.975),xycoords='axes fraction',**tnrfont,\
+                        va='top',ha='left',color='w')
         else:
-            ax.annotate("{:.0f}%".format(100*loop[i]), xy=(0.0125,0.975), xycoords='axes fraction',**tnrfont,va='top',ha='left')
+            ax.annotate("{:.0f}%".format(100*loop[i]),xy=(0.0125,0.975),xycoords='axes fraction',**tnrfont,\
+                        va='top',ha='left',color='w')
         # im = ax.imshow(np.zeros((100,100)),aspect='auto',origin='lower')
         # ax.annotate(i,xy=(0.5,0.5),va='center',ha='center')
         i+=1
@@ -209,8 +211,8 @@ def trends_get_peak_frqs(home,sollocs=[''],XI2=[],fbins=800,plateau_size=0.5,Npe
     # 2d colormap
     fig = plt.figure(figsize=(8,2),layout='constrained')    
     # loop (zoomed figs)
-    gs = GridSpec(1, 5, bottom=0.075, top=0.98, left=0.1, right=0.95, wspace=0.35, hspace=0.35) # nrows, ncols, l, r, wsp, hsp
-    ax1 = fig.add_subplot(gs[:, :3])             # 1
+    gs = GridSpec(1, 5, bottom=0.075, top=0.98, left=0.1, right=0.95, wspace=0.35, hspace=0.35, figure=fig) # nrows, ncols, l, r, wsp, hsp
+    ax1 = fig.add_subplot(gs[:, :3])  # 1
     ax2 = fig.add_subplot(gs[:, 3:])  # 2
 
     allax = fig.axes
@@ -251,11 +253,11 @@ def trends_get_peak_frqs(home,sollocs=[''],XI2=[],fbins=800,plateau_size=0.5,Npe
 
     # plot two trend lines
     # A
-    allax[0].plot([4.5,10],[1.05,0],linestyle='--',color='k',alpha=0.75)
-    allax[0].annotate('A',xy=(6.5,0.6),xycoords='data',va='top',ha='right')
+    allax[0].plot([4.5,10],[1.05,0],linestyle='--',color='w',alpha=0.75)
+    allax[0].annotate('A',xy=(6.5,0.6),xycoords='data',va='top',ha='right',color='w')
     # B
-    allax[1].plot([9.5,10],[1,0],linestyle='--',color='k',alpha=0.75)
-    allax[1].annotate('B',xy=(9.75,0.8),xycoords='data',ha='left')
+    allax[1].plot([9.5,10],[1,0],linestyle='--',color='w',alpha=0.75)
+    allax[1].annotate('B',xy=(9.75,0.8),xycoords='data',ha='left',color='w')
     allax[1].set_yticklabels([])
     # colorbar, labelling and other formatting
     cbar2d = fig.colorbar(im)
@@ -322,11 +324,11 @@ if __name__=='__main__':
     # homeloc=homes.get('highkperp_T')
     # XI2 = np.array([i/100 for i in range(45,95,5)])
     # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    # # k2d singular (0%)
-    # k2d_zeropercent(sollocs[0],_xlim=(0,25))
+    # # # k2d singular (0%)
+    # # k2d_zeropercent(sollocs[0],_xlim=(0,25))
     # # k2d multi
     # plot_k2d_growth_multipanel(sollocs=sollocs,loop=XI2,cmap='summer',clims=(0,0.15),collim=(0,25),\
-    #                         _ylim=(-1,1),_xlim=(11,15))
+    #                         _ylim=(-0.5,0.5),_xlim=(13,15))
 
     # # (2) and (4)
     # homeloc=homes.get('highkperp_T')
@@ -341,15 +343,15 @@ if __name__=='__main__':
     # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
     # plot_growth_vs_JET_power(sollocs,labels=XI2,_xlim=(0,11),_ylim=(0,0.1))
 
-    # # (4)
-    # homeloc=homes.get('highkperp_T')
-    # XI2 = [i/200 for i in range(0,200,5)]
-    # sollocs = ['run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    # trends_get_peak_frqs(homeloc,sollocs=sollocs,XI2=XI2,maxnormf=18,_xlimA=(5,11),_xlimB=(9,11))
-    
-    # (5)
+    # (4)
     homeloc=homes.get('highkperp_T')
-    XI2 = [0.0,0.01,0.11,0.25,0.38,0.5]
-    sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    get_growth_isoangle(sollocs,XI2)
+    XI2 = [i/200 for i in range(0,200,5)]
+    sollocs = ['run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    trends_get_peak_frqs(homeloc,sollocs=sollocs,XI2=XI2,maxnormf=18,_xlimA=(5,11),_xlimB=(9,11))
+    
+    # # (5)
+    # homeloc=homes.get('highkperp_T')
+    # XI2 = [0.0,0.01,0.11,0.25,0.38,0.5]
+    # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    # get_growth_isoangle(sollocs,XI2)
     

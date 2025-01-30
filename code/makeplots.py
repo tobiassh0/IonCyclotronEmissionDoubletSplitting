@@ -658,11 +658,11 @@ def get_peak_frqs(home,sollocs=[''],XI2=[],maxnormf=18,fbins=800,plateau_size=0.
         # plot freqs vs. xi2 and gamma as color
         for i in range(len(z)):
             im2d = ax2d.scatter(x[i],y[i],c=z[i],marker='s',s=25,vmin=0,vmax=0.15,cmap='summer',edgecolor='none') # 'summer'
-        # # plot two trend lines
-        # ax2d.plot([9.5,10],[1,0],linestyle='--',color='k',alpha=0.75)
-        # ax2d.annotate('A',xy=(6,0.6),xycoords='data')
-        # ax2d.plot([4.5,10],[1.05,0],linestyle='--',color='k',alpha=0.75)
-        # ax2d.annotate('B',xy=(9.3,0.8),xycoords='data')
+        # plot two trend lines
+        ax2d.plot([4.5,10],[1.05,0],linestyle='--',color='w')#,alpha=0.75)
+        ax2d.annotate('A',xy=(6,0.6),xycoords='data',color='w')
+        ax2d.plot([9.5,10],[1,0],linestyle='--',color='w')#,alpha=0.75)
+        ax2d.annotate('B',xy=(9.7,0.8),xycoords='data',color='w')
         # colorbar, labelling and other formatting
         cbar2d = fig2d.colorbar(im2d)
         cbar2d.ax.set_ylabel('Growth Rate'+' '+r'$[\Omega_i]$',**tnrfont,rotation=90.,labelpad=20)
