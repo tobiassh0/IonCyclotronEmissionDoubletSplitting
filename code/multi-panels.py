@@ -339,19 +339,19 @@ if __name__=='__main__':
 
     # # (3)
     # homeloc=homes.get('highkperp_T')
-    # XI2 = [0.0, 0.01, 0.11, 0.25, 0.38, 0.5]
+    # XI2 = [0.0, 0.01, 0.05, 0.11, 0.3, 0.5]
     # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
     # plot_growth_vs_JET_power(sollocs,labels=XI2,_xlim=(0,11),_ylim=(0,0.1))
 
-    # (4)
-    homeloc=homes.get('highkperp_T')
-    XI2 = [i/200 for i in range(0,200,5)]
-    sollocs = ['run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    trends_get_peak_frqs(homeloc,sollocs=sollocs,XI2=XI2,maxnormf=18,_xlimA=(5,11),_xlimB=(9,11))
-    
-    # # (5)
+    # # (4)
     # homeloc=homes.get('highkperp_T')
-    # XI2 = [0.0,0.01,0.11,0.25,0.38,0.5]
-    # sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
-    # get_growth_isoangle(sollocs,XI2)
+    # XI2 = [i/200 for i in range(0,200,5)]
+    # sollocs = ['run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    # trends_get_peak_frqs(homeloc,sollocs=sollocs,XI2=XI2,maxnormf=18,_xlimA=(5,11),_xlimB=(9,11))
+    
+    # (5)
+    homeloc=homes.get('highkperp_T')
+    XI2 = [0.0, 0.01, 0.05, 0.11, 0.3, 0.5]
+    sollocs = [homeloc+'run_2.07_{}_-0.646_0.01_0.01_25.0_3.5__1.0_4.0_1.7e19_0.00015_2048/'.format(i) for i in XI2]
+    get_growth_isoangle(sollocs,XI2)
     
