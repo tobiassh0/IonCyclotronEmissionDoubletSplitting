@@ -1,5 +1,14 @@
 import os,sys
 
+def getHomes():
+    homes = {
+        'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/",
+        'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons_high_kperp/",
+        'lowkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/",
+        'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
+    }
+    return homes
+
 def xoutside_ticks(lax):
 	for ax in lax:
 		ax.tick_params(axis='x',direction='out',top=False,right=False,left=False,bottom=True)
@@ -124,7 +133,7 @@ def Fig2_peakfreq_freqextraction(sollocs,zoomed_sollocs,xiT,maxnormf=15,name='',
     fig.savefig('PRL_Fig2_freq_peaks_'+name+'.png',bbox_inches='tight')
     return None
 
-def Fig3_diffgrowthrates_D_DT_contour(sollocs_T,sollocs_noT,xi2_T=[],xi2_noT=[],smooth_cont=False,name=''):
+def Fig3_diffgrowthrates_D_DT_contour(sollocs_T,sollocs_noT,xi2_T=[],xi2_noT=[],smooth_contour=False,name=''):
 
     # setup plot
     fig,axs = plt.subplots(figsize=(8,4),nrows=2,ncols=2,sharey=True,sharex=True)
@@ -162,7 +171,7 @@ def Fig3_diffgrowthrates_D_DT_contour(sollocs_T,sollocs_noT,xi2_T=[],xi2_noT=[],
             # imshow and contour diff
         extents = [0,15,-4,4]
         im = axs[i].imshow((growth_T-growth_noT)/w0,aspect='auto',origin='lower',cmap='bwr',clim=(-0.15,0.15),extent=extents)
-        if smooth_cont:
+        if smooth_contour:
             # smooth data for contour
             freqdiff = scipy.ndimage.filters.gaussian_filter((freq_T-freq_noT)/w0,5)
         else:
@@ -187,13 +196,80 @@ def Fig3_diffgrowthrates_D_DT_contour(sollocs_T,sollocs_noT,xi2_T=[],xi2_noT=[],
     plt.show()
     return None
 
+def plot_growth_rate_diff(sollocs_T,sollocs_noT,XI2,rowlim=(-4,4),collim=(0,25),_ylim=(-1,1),_xlim=(0,15),smooth_contour=False):
+    # setup arrays
+    _xlim=np.array(_xlim)
+    _ylim=np.array(_ylim)
+    collim=np.array(collim)
+    rowlim=np.array(rowlim)
+
+    # setup plot
+    fig,axs = plt.subplots(figsize=(8,10),nrows=5,ncols=2,sharey=True,sharex=True)
+    fig.subplots_adjust(wspace=0.05,hspace=0.05)
+    axs = axs.ravel()
+
+    # loop through XI2 concentrations and compare
+    home = os.getcwd()
+    for i in range(len(sollocs_T)):
+        try:
+            growth_T=read_pkl(sollocs_T[i]+'k2d_growth')
+            growth_noT=read_pkl(sollocs_noT[i]+'k2d_growth')
+            freq_T=read_pkl(sollocs_T[i]+'k2d_freq')
+            freq_noT=read_pkl(sollocs_noT[i]+'k2d_freq')
+            data_T=read_all_data(loc=sollocs_T[i])
+            w0,k0,w,dw,kpara,kperp = data_T
+            extents = [collim[0],collim[1],rowlim[0],rowlim[1]]
+        except:
+            # load T
+            os.chdir(sollocs_T[i])
+            data_T=read_all_data(loc=sollocs_T[i])
+            w0,k0,w,dw,kpara,kperp = data_T
+            growth_T,extents=make2D(kpara,kperp,dw,rowlim=rowlim*k0,collim=collim*k0,\
+                            bins=(1000,1000),limits=True,dump=False,name='k2d_growth') # y, x, val
+            # freq_T,extents=make2D(kpara,kperp,w,rowlim=rowlim*k0,collim=collim*k0,\
+            #                 bins=(1000,1000),limits=True,dump=True,name='k2d_freq') # y, x, val
+            # load no T
+            os.chdir(sollocs_noT[i])
+            data_noT=read_all_data(loc=sollocs_noT[i])
+            w0,k0,w,dw,kpara,kperp = data_noT
+            growth_noT,extents=make2D(kpara,kperp,dw,rowlim=rowlim*k0,collim=collim*k0,\
+                            bins=(1000,1000),limits=True,dump=False,name='k2d_growth') # y, x, val
+            # freq_noT,extents=make2D(kpara,kperp,w,rowlim=rowlim*k0,collim=collim*k0,\
+            #                 bins=(1000,1000),limits=True,dump=True,name='k2d_freq') # y, x, val
+            os.chdir(home)
+            # imshow and contour diff
+        im = axs[i].imshow((growth_T-growth_noT)/w0,aspect='auto',origin='lower',cmap='bwr',clim=(-0.15,0.15),extent=extents)
+        # # smooth data for contour
+        # if smooth_contour:
+        #     freqdiff = scipy.ndimage.filters.gaussian_filter((freq_T-freq_noT)/w0,5)
+        # else:
+        #     freqdiff = (freq_T-freq_noT)/w0
+        # cont = axs[i].contour(freqdiff,levels=0,origin='lower',colors='k',alpha=0.5,extent=extents)
+        # panel label
+        xi2label = '{:.0f}%'.format(100*XI2[i])
+        if i == 0:
+            xi2label = r'$\xi_T=$'+xi2label
+        axs[i].annotate(xi2label,xy=(0.025,0.975),xycoords='axes fraction',ha='left',va='top',**tnrfont)
+        axs[i].set_ylim(_ylim) ; axs[i].set_xlim(_xlim)
+        axs[i].locator_params(nbins=4,axis='both')
+
+    # colorbar
+    p0 = axs[0].get_position().get_points().flatten() # [left bottom right top]
+    p3 = axs[-1].get_position().get_points().flatten()
+    cbar = fig.add_axes([p3[2]+0.02, p3[1], 0.01, p0[-1]-p3[1]]) # [left bottom width height]
+    plt.colorbar(im, cax=cbar, orientation='vertical')
+    cbar.set_ylabel(r'$(\gamma_{DT}-\gamma_D)/\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
+    # labels
+    fig.supylabel(r'$k_\parallel V_A/\Omega_i$',**tnrfont)
+    fig.supxlabel(r'$k_\perp V_A/\Omega_i$',**tnrfont)
+    # savefigs
+    fig.savefig('growthrate_subtraction.png',bbox_inches='tight')
+
+    plt.show()
+    return None
+
 def GETLOCSANDXI2():
-    homes = {
-        'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration/",
-        'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Triton_concentration_high_kperp/",
-        'lowkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/",
-        'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
-    }
+    homes=getHomes()
 
     home_noT = homes.get('highkperp_noT')
     home_T = homes.get('highkperp_T')
@@ -215,7 +291,7 @@ def GETLOCSANDXI2():
         # replace list items with sorted xi2 and electron number density
         lst[8] = str(xi2_noT[i])
         lst[11] = str(ne_noT[i])
-        tsollocs_noT.append(home_noT+'_'.join(lst)+'/') # append '/' on end of dir
+        tsollocs_noT.append('_'.join(lst)+'/') # append '/' on end of dir
     sollocs_noT = np.array(tsollocs_noT)
     del tsollocs_noT
 
@@ -233,12 +309,17 @@ if __name__=='__main__':
     import matplotlib as mpl
     import scipy.ndimage
 
+    homes=getHomes()
     xi2_noT, sollocs_noT, xi2_T, sollocs_T = GETLOCSANDXI2()
     sollocs = [sollocs_T,sollocs_noT]
     xi2 = [xi2_T,xi2_noT]
     zoomed_sollocs_T = [sollocs_T[4],sollocs_T[12],sollocs_T[20],sollocs_T[28]]# 10, 30, 50, 70
     zoomed_sollocs_noT = [sollocs_noT[4],sollocs_noT[12],sollocs_noT[20],sollocs_noT[28]]# 10, 30, 50, 70
     zoomed_sollocs = [zoomed_sollocs_T,zoomed_sollocs_noT]
+
+    XI2 = [i/100 for i in np.arange(0,100,10)]
+    sollocs_T = [homes.get('highkperp_T')+'/'+str(i) for i in sollocs_T if float(i.split('_')[2]) in XI2]
+    sollocs_noT = [homes.get('highkperp_noT')+'/'+str(i) for i in sollocs_noT if float(i.split('_')[8]) in XI2]
 
     # # Fig1
     # index = 0 # index of sollocs (and hence xi2) to choose
@@ -247,13 +328,15 @@ if __name__=='__main__':
     # Fig1_freqgrowth_freqkpara(w,dw,kpara,norm=[w0,k0],name='xiT_{}'.format(xi2_T[index]))
     # sys.exit()
 
-    # Fig2
-    name = ['withT','noT']
-    for i in range(0,2):
-        Fig2_peakfreq_freqextraction(sollocs[i],zoomed_sollocs[i],xi2[i],name=name[i])
-    sys.exit()
+    # # Fig2
+    # name = ['withT','noT']
+    # for i in range(0,2):
+    #     Fig2_peakfreq_freqextraction(sollocs[i],zoomed_sollocs[i],xi2[i],name=name[i])
+    # sys.exit()
 
-    # Fig3
-    Fig3_diffgrowthrates_D_DT_contour(zoomed_sollocs[0],zoomed_sollocs[1],xi2_T=[0.1,0.3,0.5,0.7],\
-                                        smooth_cont=True,name='smooth')
-    sys.exit()
+    # # Fig3
+    # Fig3_diffgrowthrates_D_DT_contour(zoomed_sollocs[0],zoomed_sollocs[1],xi2_T=[0.1,0.3,0.5,0.7],\
+    #                                     smooth_contour=True,name='smooth')
+    # sys.exit()
+
+    plot_growth_rate_diff(sollocs_T,sollocs_noT,XI2,_xlim=(0,15),_ylim=(-1.5,1.5))
