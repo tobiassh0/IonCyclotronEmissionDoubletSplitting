@@ -259,9 +259,8 @@ def plot_growth_rate_diff(sollocs_T,sollocs_noT,XI2,rowlim=(-4,4),collim=(0,25),
     cbar = fig.add_axes([p3[2]+0.02, p3[1], 0.01, p0[-1]-p3[1]]) # [left bottom width height]
     plt.colorbar(im, cax=cbar, orientation='vertical')
     cbar.set_ylabel(r'$(\gamma_{DT}-\gamma_D)/\Omega_i$',**tnrfont,rotation=90.,labelpad=20)
-    # labels
-    fig.supylabel(r'$k_\parallel V_A/\Omega_i$',**tnrfont)
-    fig.supxlabel(r'$k_\perp V_A/\Omega_i$',**tnrfont)
+    fig.supylabel("Parallel Wavenumber"+ "  "+r"$[\Omega_i/V_A]$",**tnrfont)
+    fig.supxlabel("Perpendicular Wavenumber"+ "  "+r"$[\Omega_i/V_A]$",**tnrfont)
     # savefigs
     fig.savefig('growthrate_subtraction.png',bbox_inches='tight')
 
