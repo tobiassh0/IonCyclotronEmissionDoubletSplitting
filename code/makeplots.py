@@ -168,10 +168,10 @@ def make2D(rowval,colval,val,rowlim=(None,None),collim=(None,None),bins=(1000,10
             Z = read_pkl(name)
             [colmin,colmax,rowmin,rowmax] = read_pkl(name+'_ext')
         else:
-            read=False
             raise SystemError
-    except: # can't load data
-        if bins[0] == None: # no bins
+    except: # don't load data
+        print('Making 2D...')
+        if bins[0] == None: # no bins given
             # unique values
             urow,urowind = np.unique(rowval,return_index=True)
             ucol,ucolind = np.unique(colval,return_index=True)
@@ -430,7 +430,11 @@ def getZfreq(Zfreq,x,y):
     return freq
 
 # get freq vs. growth for a given angle
-def get_frq_growth_angles(Z,Zfreq,wmax=15,rowlim=(None,None),collim=(None,None),norm=[1,1],angles=[90.]):
+def get_frq_growth_angles(Z,Zfreq,wmax=15,rowlim=(None,None),collim=(None,None),norm=[1,1],angles=[90.],lsize=None):
+    """
+        wmax : redundant, remove
+        norm : array [w0,k0] --> w0 redundant in this use
+    """
     Ny, Nx = Z.shape
     # lsize = np.sqrt(Nx**2+Ny**2) # maximum length of array
     # limits of box, normalised units
@@ -449,25 +453,28 @@ def get_frq_growth_angles(Z,Zfreq,wmax=15,rowlim=(None,None),collim=(None,None),
     for j in range(len(angles)):
         xlim, ylim = ld.LineBoxIntersection(Ystart,Yend,Xn,Yn,Nx,Ny,abs(angles[j])*np.pi/180)
         # find data points along line
-        lsize = np.sqrt((xlim[-1]-xlim[0])**2 + (ylim[-1]-ylim[0])**2)
+        if lsize==None:
+            lsize = np.sqrt((xlim[-1]-xlim[0])**2 + (ylim[-1]-ylim[0])**2)
         x = np.linspace(xlim[0],xlim[1],int(lsize))
         y = np.linspace(ylim[0],ylim[1],int(lsize))
         zi.append(scipy.ndimage.map_coordinates(Z,np.vstack((y,x)))) # growth rates (rad/s)
+        # freq from kpara, kperp
+        tkpara = np.linspace(0,np.max(np.abs(ylim))*norm[1],len(zi[-1]))
+        tkperp = np.linspace(0,np.max(np.abs(xlim))*norm[1],len(zi[-1]))
+        # freqs.append(getFreq(tkpara,tkperp,norm[0],norm[1]))
+        freqs.append(getZfreq(Zfreq,x,y))
+        """ alternative method for extracting frequencies, using grid values rather than FAW dispersion relation
+            >>> freqs.append(getZfreq(Zfreq,x,y))
+        """
         # convert all to real coordinates
         xlim = (collim[0]/norm[1])+xlim*((collim[1]-collim[0])/norm[1])/Nx
         ylim = (rowlim[0]/norm[1])+ylim*((rowlim[1]-rowlim[0])/norm[1])/Ny
         # flip line direction is pointed down (end point flips so need to revert)
         if xlim[-1]<0.00001 and ylim[-1]<0.00001: # should be equal to 0, this is valid for difference in angles greater than a degree 
             zi[-1] = np.flip(zi[-1]) # opposite direction of line
+            freqs[-1] = np.flip(freqs[-1])
         # summate all points # "growth per (dkpara,dw) cell"
         zisum.append(np.sum(zi[-1])/len(zi[-1])) # normalise to number of cells along line
-        # freq from kpara, kperp
-        tkpara = np.linspace(0,np.max(np.abs(ylim))*norm[1],len(zi[-1]))
-        tkperp = np.linspace(0,np.max(np.abs(xlim))*norm[1],len(zi[-1]))
-        freqs.append(getFreq(tkpara,tkperp,norm[0],norm[1]))
-        """ alternative method for extracting frequencies, using grid values rather than FAW dispersion relation
-            >>> freqs.append(getZfreq(Zfreq,x,y))
-        """
     return freqs, zi, zisum
 
 # plot peak frequencies in 2d xi2 space for a given angle
@@ -735,17 +742,24 @@ def getsollocs(home=''):
     sollocs = [i+'/' for i in os.listdir(home) if 'run' in i]
     return np.sort(sollocs)
 
-#-#-#
-if __name__ == '__main__':
-    ## BODY ## 
-    
+
+# define all solloc files (low and high kperp, tritium and no tritium)
+def getHomes():
     homes = {
         'lowkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons/",
         'highkperp_T':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_Tritons_high_kperp/",
         'lowkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons/",
         'highkperp_noT':"/home/space/phrmsf/Documents/ICE_DS/JET26148/default_params_with_no_Tritons_high_kperp/",        
     }
+    return homes
+
+
+#-#-#
+if __name__ == '__main__':
+    ## BODY ## 
     
+    homes = getHomes()
+
     """
     :: examples  :: 
         # one file
